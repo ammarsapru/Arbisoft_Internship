@@ -1,0 +1,155 @@
+================================================================
+R² SCORE (R-SQUARED) EXPLAINED
+================================================================
+
+
+WHAT IS IT?
+-----------------------------------------
+R² (R-squared), also called the coefficient of determination,
+answers one question:
+
+    "How much of the variation in concrete strength does
+     my model actually explain?"
+
+It is a proportion, always between 0 and 1 (or negative if
+the model is truly terrible). Unlike MSE, it is unit-free and
+immediately interpretable.
+
+    r2 = r2_score(y_test, pred)
+
+
+THE SCALE
+-----------------------------------------
+
+  R² = 1.00  → perfect model, predictions match reality exactly
+  R² = 0.90  → model explains 90% of the variation ← very good
+  R² = 0.75  → model explains 75% of the variation ← decent
+  R² = 0.50  → model explains 50% of the variation ← weak
+  R² = 0.00  → model is no better than just guessing the mean
+  R² < 0.00  → model is WORSE than guessing the mean (bad fit)
+
+
+WHAT "EXPLAINING VARIATION" MEANS — VISUALIZATION
+-----------------------------------------
+Imagine your 10 test samples' actual strengths:
+
+  Actual:   [40, 62, 25, 55, 33, 70, 48, 38, 60, 44]
+  Mean:      47.5  (just the average of all actuals)
+
+  Baseline "dumb model" — always predicts the mean (47.5):
+  ┌─────────────────────────────────────────────────────┐
+  │ Actual:    40  62  25  55  33  70  48  38  60  44  │
+  │ Dumb pred: 47  47  47  47  47  47  47  47  47  47  │
+  │ Error²:    49 210 506  56 207 506   1  90 156  12  │
+  │ Total error²: 1793  ← this is called SS_total       │
+  └─────────────────────────────────────────────────────┘
+
+  Your LinearRegression model:
+  ┌─────────────────────────────────────────────────────┐
+  │ Actual:    40  62  25  55  33  70  48  38  60  44  │
+  │ Model pred:38  60  26  53  35  66  50  40  58  46  │
+  │ Error²:     4   4   1   4   4  16   4   4   4   4  │
+  │ Total error²: 49  ← this is called SS_residual      │
+  └─────────────────────────────────────────────────────┘
+
+  R² = 1 - (SS_residual / SS_total)
+     = 1 - (49 / 1793)
+     = 1 - 0.027
+     = 0.973  → model explains 97.3% of the variation
+
+
+THE FORMULA BROKEN DOWN
+-----------------------------------------
+
+  SS_total    = Σ (actual - mean_of_actual)²
+                total variation in your target values
+
+  SS_residual = Σ (actual - predicted)²
+                remaining variation your model did NOT explain
+                (this is just n × MSE)
+
+  R² = 1 - (SS_residual / SS_total)
+
+  If your model predicts perfectly:
+    SS_residual = 0  →  R² = 1 - 0 = 1.0
+
+  If your model is as bad as the dumb mean predictor:
+    SS_residual = SS_total  →  R² = 1 - 1 = 0.0
+
+  If your model is somehow WORSE than the mean:
+    SS_residual > SS_total  →  R² is negative
+
+
+WHY USE BOTH MSE AND R²?
+-----------------------------------------
+They answer different questions:
+
+  MSE   → "How big are my errors?" (in MPa² units)
+           Useful for comparing two models on the SAME dataset.
+           Hard to interpret in isolation.
+
+  R²    → "How good is my model relative to doing nothing?"
+           Useful for understanding model quality at a glance.
+           Works across different datasets and scales.
+
+  Together:
+    MSE = 23.7, R² = 0.85  → errors are ~4.9 MPa (√23.7), and
+                               the model explains 85% of variation.
+                               That paints a full picture.
+
+
+WHAT THE CODE LINES DO
+-----------------------------------------
+
+    mse = mean_squared_error(y_test, pred)
+    r2  = r2_score(y_test, pred)
+    print(f"{model_name}:")
+    print(f"  Mean Squared Error: {mse:.2f}")
+    print(f"  R2 Score:           {r2:.2f}")
+
+  y_test      → real values held back from training
+  pred        → model's predictions for those rows
+  model_name  → a string like "LinearRegression", passed in
+                 from a function — allows reusing this block
+                 for multiple models and labelling each result
+  {mse:.2f}   → format mse as a float to 2 DECIMAL PLACES
+                 (NOT factorial — explained below)
+
+
+WHAT IS .2f?
+-----------------------------------------
+It is a format specifier inside an f-string. The structure is:
+
+    {value : [width] . [precision] type}
+    {mse   :         .      2      f   }
+
+  f   = floating point (a decimal number)
+  .2  = show exactly 2 digits after the decimal point
+
+Examples:
+  mse = 23.74892   →  f"{mse:.2f}"  →  "23.75"  (rounded)
+  mse = 5.1        →  f"{mse:.2f}"  →  "5.10"   (padded)
+  mse = 100.0      →  f"{mse:.2f}"  →  "100.00"
+
+  .3f  →  3 decimal places  →  "23.749"
+  .0f  →  0 decimal places  →  "24"
+  .5f  →  5 decimal places  →  "23.74892"
+
+It has NOTHING to do with factorial (2! = 2×1 = 2). The f
+stands for float, not factorial.
+
+
+COMMON R² INTERPRETATION FOR CONCRETE STRENGTH
+-----------------------------------------
+
+  R² > 0.90  → your model is capturing the physics well
+  R² ~ 0.80  → solid result for a simple linear model
+  R² ~ 0.70  → linear model may be missing non-linear patterns
+  R² < 0.60  → consider a more powerful model (Random Forest,
+                gradient boosting) or more feature engineering
+
+For this dataset with LinearRegression, expect R² around 0.60–0.65
+because concrete strength has non-linear relationships with its
+ingredients that a straight line cannot fully capture.
+
+================================================================

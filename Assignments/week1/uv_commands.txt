@@ -1,0 +1,59 @@
+WHY USE UV (benefits over pip, venv, conda, poetry, pipenv):
+================================================================
+
+SPEED:
+- 10-100x faster than pip for installs and dependency resolution
+- Written in Rust, not Python — no interpreter overhead
+- Aggressively caches packages so repeated installs are near-instant
+
+ALL-IN-ONE TOOL (replaces multiple tools):
+- pip          -> uv pip / uv add
+- venv         -> uv venv (created automatically)
+- pip-tools    -> uv lock (generates a lockfile)
+- pyenv        -> uv python install (manages Python versions too)
+- poetry/pipenv -> uv init + uv add (full project management)
+
+LOCKFILE SUPPORT:
+- Generates uv.lock for fully reproducible installs across machines
+- pip has no built-in lockfile; pip-tools/poetry require extra setup
+
+PYTHON VERSION MANAGEMENT:
+- uv python install 3.12  (downloads and manages Python versions)
+- No need for pyenv or conda just to switch Python versions
+
+RELIABLE DEPENDENCY RESOLUTION:
+- Resolves the full dependency graph before installing anything
+- Catches conflicts upfront instead of leaving a broken environment
+- pip installs greedily and can silently break existing packages
+
+NO ACTIVATION NEEDED:
+- uv run script.py  runs inside the venv without activating it
+- Eliminates the common "forgot to activate" mistake
+
+LIGHTWEIGHT:
+- Single binary, no dependencies
+- Does not require Python to be installed first (unlike pip)
+
+VS CONDA SPECIFICALLY:
+- uv is faster and uses standard PyPI packages
+- Conda installs non-Python binaries too (useful for data science libs
+  like CUDA) but is much slower and heavier; uv covers most use cases
+  without the overhead
+
+================================================================
+
+installing uv (PowerShell):
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+restart terminal or use this to place uv on PATH (PowerShell):
+$env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "User")
+
+verify:
+uv --version
+
+to setup project:
+uv init
+
+to add dependencies:
+uv add numpy pandas scikit-learn
+

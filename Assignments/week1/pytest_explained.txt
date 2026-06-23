@@ -1,0 +1,195 @@
+================================================================
+PYTEST — FROM BASICS TO HOW IT IS USED IN THIS PROJECT
+================================================================
+
+
+WHAT IS PYTEST?
+-----------------------------------------
+pytest is a testing framework for Python. A test is a piece of code
+that checks whether your real code does what it's supposed to do.
+You write tests once; then every time you change your code you run
+them to catch anything you broke.
+
+It is not part of the standard library — install it with:
+
+    uv add --dev pytest
+
+
+WHY WRITE TESTS?
+-----------------------------------------
+Without tests:
+  You change bin_strength() to fix a bug.
+  It now works for the new case but silently breaks the old one.
+  You don't notice until a model produces garbage results.
+
+With tests:
+  You change bin_strength().
+  You run pytest. It immediately tells you:
+    FAILED test_data_prep.py::test_bin_strength_low
+  You fix the regression before it reaches your model.
+
+
+THE FUNDAMENTAL RULE
+-----------------------------------------
+A test is just a Python function whose name starts with test_.
+pytest finds and runs these automatically.
+
+    def test_something():
+        result = my_function(input)
+        assert result == expected_output
+
+If the assert passes → test PASSES (green).
+If the assert fails → test FAILS (red), pytest shows you what
+the actual value was vs what you expected.
+
+
+HOW ASSERT WORKS
+-----------------------------------------
+assert is a Python keyword that raises an error if the condition
+is False.
+
+    assert 2 + 2 == 4      # passes silently
+    assert 2 + 2 == 5      # raises AssertionError: assert 4 == 5
+
+pytest intercepts that error and formats it into a readable report.
+
+    assert check_missing_values(df) == 0
+
+If check_missing_values returns 3 instead of 0, pytest shows:
+    AssertionError: assert 3 == 0
+
+
+HOW PYTEST FINDS TESTS
+-----------------------------------------
+pytest scans your project for:
+  - Files named test_*.py or *_test.py
+  - Functions inside those files named test_*
+  - Classes named Test* containing methods named test_*
+
+You do not need to import pytest or register your tests anywhere.
+Just name them correctly and run:
+
+    pytest
+
+
+RUNNING PYTEST
+-----------------------------------------
+In your terminal (from the project folder):
+
+    pytest                          # run all tests
+    pytest test_data_prep.py        # run one file
+    pytest test_data_prep.py::test_bin_strength_low   # run one test
+    pytest -v                       # verbose: show each test name
+    pytest -v --tb=short            # shorter error tracebacks
+
+
+READING THE OUTPUT
+-----------------------------------------
+    collected 7 items
+
+    test_data_prep.py::test_check_missing_values_clean_data   PASSED  [ 14%]
+    test_data_prep.py::test_check_missing_values_with_nulls   PASSED  [ 28%]
+    test_data_prep.py::test_bin_strength_low                  PASSED  [ 42%]
+    test_data_prep.py::test_bin_strength_medium               PASSED  [ 57%]
+    test_data_prep.py::test_bin_strength_high                 PASSED  [ 71%]
+    test_data_prep.py::test_add_cement_water_ratio_adds_column PASSED [ 85%]
+    test_data_prep.py::test_prepare_features_shapes           PASSED  [100%]
+
+    ======================== 7 passed in 0.43s ========================
+
+  . = pass    F = fail    E = error (exception before assert ran)
+
+
+WHAT A FAILING TEST LOOKS LIKE
+-----------------------------------------
+Suppose bin_strength has a bug and returns 1 for values < 30:
+
+    FAILED test_data_prep.py::test_bin_strength_low
+
+    _________________ test_bin_strength_low _________________
+    def test_bin_strength_low():
+        result = bin_strength(np.array([5.0, 15.0, 29.9]))
+  >       assert list(result) == [0, 0, 0]
+    E   AssertionError: assert [1, 1, 1] == [0, 0, 0]
+
+pytest tells you exactly which line failed, what you got, and
+what you expected. No print statements needed.
+
+
+pytest.approx — FOR FLOATING POINT
+-----------------------------------------
+Floating point arithmetic is imprecise. Never use == for floats:
+
+    assert 0.1 + 0.2 == 0.3       # FAILS — 0.1+0.2 = 0.30000000000000004
+
+Use pytest.approx instead:
+
+    assert 0.1 + 0.2 == pytest.approx(0.3)   # PASSES
+    assert result[0, -1] == pytest.approx(2.0)
+
+pytest.approx allows a tiny tolerance (1e-6 by default).
+
+
+numpy ARRAY ASSERTIONS
+-----------------------------------------
+For comparing entire arrays, use numpy's testing helpers:
+
+    import numpy as np
+    np.testing.assert_array_equal(actual, expected)     # exact match
+    np.testing.assert_array_almost_equal(actual, expected, decimal=5)
+
+Regular assert with arrays compares element-by-element and returns
+an array of booleans — not a single True/False — which causes
+confusing errors.
+
+
+THE THREE PARTS OF A GOOD TEST (AAA)
+-----------------------------------------
+Every test should have three clear sections:
+
+    def test_add_cement_water_ratio_adds_column():
+        # ARRANGE — set up the inputs
+        X = np.array([[400.0, 0.0, 0.0, 200.0, 0.0, 0.0, 0.0, 28.0]])
+
+        # ACT — call the function you're testing
+        result = add_cement_water_ratio(X)
+
+        # ASSERT — check the output
+        assert result.shape == (1, 9)
+        assert result[0, -1] == pytest.approx(2.0)
+
+Arrange / Act / Assert — keeps tests readable and focused.
+
+
+WHAT MAKES A GOOD UNIT TEST
+-----------------------------------------
+  Tests ONE thing at a time (one function, one behaviour)
+  Uses small, controlled inputs (not the full 1030-row dataset)
+  Is independent (does not depend on other tests running first)
+  Is fast (milliseconds, not seconds)
+  Has a name that describes exactly what it checks
+
+  BAD:   def test_stuff():
+  GOOD:  def test_bin_strength_returns_zero_for_values_below_30():
+
+
+THE TESTS IN THIS PROJECT (test_data_prep.py)
+-----------------------------------------
+Function being tested         What the test checks
+-----------------------------------------
+check_missing_values()        Returns 0 on clean data
+check_missing_values()        Correctly counts 3 nulls
+bin_strength()                Values below 30 → class 0
+bin_strength()                Values 30-50 → class 1
+bin_strength()                Values above 50 → class 2
+add_cement_water_ratio()      Output has one extra column and
+                              cement/water = 400/200 = 2.0
+prepare_features()            X has all columns except last,
+                              y is exactly the last column
+
+Run them with:
+
+    cd c:\Users\ammar\OneDrive\Desktop\personal\arbisoft\week1_assignment
+    pytest test_data_prep.py -v
+
+================================================================

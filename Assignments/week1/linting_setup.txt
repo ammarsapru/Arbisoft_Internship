@@ -1,0 +1,138 @@
+================================================================
+LINTING SETUP — RUFF AND FLAKE8
+================================================================
+
+Linting is the process of automatically checking your code for
+style errors, unused imports, undefined variables, and other
+issues — without running the code. It catches problems like
+the plt.ylable typo before you even run the file.
+
+
+================================================================
+OPTION 1: RUFF (recommended — faster, replaces flake8 + more)
+================================================================
+
+WHAT IT IS:
+  An extremely fast Python linter written in Rust. A single tool
+  that replaces flake8, isort, pyupgrade, and several others.
+  Checks style, imports, unused variables, and can auto-fix many
+  issues.
+
+INSTALL:
+  uv add --dev ruff
+
+RUN:
+  ruff check .                  # check all Python files
+  ruff check . --fix            # auto-fix what it can
+  ruff check cement_classification.ipynb   # check a specific file
+
+CONFIGURE (create pyproject.toml in your project root):
+  [tool.ruff]
+  line-length = 88
+  target-version = "py312"
+
+  [tool.ruff.lint]
+  select = ["E", "F", "W", "I"]
+  # E = pycodestyle errors
+  # F = pyflakes (undefined names, unused imports)
+  # W = pycodestyle warnings
+  # I = isort (import ordering)
+
+  ignore = ["E501"]   # ignore line-too-long if you want
+
+RUN IN VS CODE:
+  Install the "Ruff" extension from the VS Code marketplace.
+  It will underline issues in real time as you type.
+  Set it as your formatter in settings.json:
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "[python]": { "editor.formatOnSave": true }
+
+CLEAN LINT PASS (what you want to achieve):
+  ruff check .
+  All checks passed!
+
+EXAMPLE ISSUES RUFF CATCHES:
+  F401  'numpy as np' imported but unused
+  F821  undefined name 'predictions'
+  E711  comparison to None (use 'is None')
+  W291  trailing whitespace
+  I001  import order wrong
+
+
+================================================================
+OPTION 2: FLAKE8 (older, widely used, more familiar in tutorials)
+================================================================
+
+WHAT IT IS:
+  The classic Python style checker. Checks PEP 8 compliance
+  (spacing, line length, naming). Does not auto-fix.
+
+INSTALL:
+  uv add --dev flake8
+
+RUN:
+  flake8 .                      # check all Python files
+  flake8 data_prep.py           # check specific file
+  flake8 --max-line-length=88 . # override line length limit
+
+CONFIGURE (create .flake8 in your project root):
+  [flake8]
+  max-line-length = 88
+  exclude =
+      .venv,
+      __pycache__,
+      .git
+  ignore = W503
+
+RUN IN VS CODE:
+  Install the "Flake8" extension from the VS Code marketplace.
+  Add to VS Code settings.json:
+    "python.linting.flake8Enabled": true,
+    "python.linting.enabled": true
+
+CLEAN LINT PASS:
+  flake8 .
+  (no output = no errors = clean pass)
+
+EXAMPLE ISSUES FLAKE8 CATCHES:
+  E302  expected 2 blank lines, found 1
+  E501  line too long (97 > 79 characters)
+  F401  'pandas as pd' imported but unused
+  W291  trailing whitespace
+  E711  comparison to None should be 'is None'
+
+
+================================================================
+WHICH TO USE
+================================================================
+
+  Use RUFF if starting fresh — it is faster, fixes more issues
+  automatically, and replaces multiple tools at once.
+
+  Use FLAKE8 if working on an existing project that already
+  uses it, or if a job/team requires it specifically.
+
+  They largely catch the same problems. You do not need both.
+
+
+================================================================
+RUNNING A CLEAN LINT PASS ON THIS PROJECT
+================================================================
+
+  # Install
+  uv add --dev ruff
+
+  # Check
+  ruff check .
+
+  # Auto-fix what can be fixed automatically
+  ruff check . --fix
+
+  # Re-check to see what remains (must fix manually)
+  ruff check .
+
+  # When output is:
+  # All checks passed!
+  # → you have a clean lint pass
+
+================================================================

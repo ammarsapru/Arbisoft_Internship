@@ -1,0 +1,95 @@
+================================================================
+MEAN SQUARED ERROR (MSE) EXPLAINED
+================================================================
+
+
+WHAT IS IT?
+-----------------------------------------
+MSE measures how far off your model's predictions are from the
+real values, on average. It is the most common error metric for
+regression problems (predicting a number, not a category).
+
+The formula:
+
+    MSE = (1/n) * Σ (actual - predicted)²
+
+    n          = number of predictions (your test set size)
+    actual     = the real compressive strength values (y_test)
+    predicted  = what your model guessed (pred)
+    Σ          = sum all of these up
+
+
+VISUALIZATION: What squaring does
+-----------------------------------------
+Suppose your model makes 5 predictions on concrete samples:
+
+  Sample | Actual (MPa) | Predicted (MPa) | Error  | Error²
+  -------|--------------|-----------------|--------|--------
+    1    |    40.0      |     38.5        |  -1.5  |   2.25
+    2    |    62.0      |     70.0        |  +8.0  |  64.00
+    3    |    25.0      |     24.0        |  -1.0  |   1.00
+    4    |    55.0      |     48.0        |  -7.0  |  49.00
+    5    |    33.0      |     34.5        |  +1.5  |   2.25
+                                                   ---------
+                                          Sum:      118.50
+                                          MSE:       23.70  (118.50 / 5)
+
+WHY SQUARE THE ERRORS?
+  1. Without squaring: errors of +8 and -8 would cancel out to 0,
+     making it look like the model is perfect when it's not.
+  2. Squaring makes all errors positive so they accumulate.
+  3. Squaring also PUNISHES large errors more heavily than small ones.
+     An error of 8 contributes 64 to the sum.
+     An error of 1 contributes only 1.
+     This means MSE strongly penalizes wild predictions.
+
+
+VISUALIZATION: MSE scale
+-----------------------------------------
+Your concrete strength values are in MPa (roughly 10–80 MPa range).
+
+  Perfect model (no errors)     →  MSE = 0.00
+  Very good model               →  MSE < 20.00
+  Decent model                  →  MSE ~ 50–100
+  Poor model                    →  MSE > 200
+
+MSE is in SQUARED units (MPa²), which makes it hard to interpret
+directly. That's why people often also report RMSE:
+
+    RMSE = √MSE
+
+RMSE is back in the original units (MPa), so RMSE = 5.0 means
+your predictions are off by about 5 MPa on average.
+
+    import numpy as np
+    rmse = np.sqrt(mse)
+
+
+WHAT THE CODE LINE DOES
+-----------------------------------------
+
+    mse = mean_squared_error(y_test, pred)
+
+  y_test  → the real compressive strength values from your test set
+             (the answers you held back during training)
+  pred    → what your trained LinearRegression model predicted
+             for those same test rows
+  result  → a single number representing average squared error
+
+Order matters: mean_squared_error(actual, predicted)
+Swapping them gives the same result here, but it's convention
+and matters for other metrics — always put actual first.
+
+
+LOWER IS BETTER
+-----------------------------------------
+
+  Model A: MSE = 15.0   ← better, predictions are close
+  Model B: MSE = 80.0   ← worse, predictions are further off
+
+There is no universal "good" MSE — it depends entirely on the
+scale of what you're predicting. MSE of 50 on cement strength
+(range 10–80 MPa) is very different from MSE of 50 on house
+prices (range $100,000–$1,000,000).
+
+================================================================
