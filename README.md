@@ -18,6 +18,14 @@ The internship covers AI/ML basics, including but not limited to:
 
 ## Repository Structure
 
+### Assignments
+
+Structured weekly assignments applying the concepts covered during the internship. Each week contains a self-contained project with a notebook, unit tests, utility code, and documentation.
+
+| Week | Topic | Key Deliverables | Status |
+|---|---|---|:---:|
+| [Week 1](Assignments/week1/) | Concrete Compressive Strength — regression and classification ML pipeline | Notebook, pytest tests, prompts log, evaluation metrics, confusion matrix | ✅ |
+
 ### DSA_PRACTISE
 
 This folder contains implementations of core data structures and algorithms in Python. These serve as the foundation for understanding how AI/ML algorithms work under the hood.
