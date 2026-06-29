@@ -1,0 +1,4 @@
+species_id,common_name,scientific_name,avg_lifespan_years,conservation_status
+1,Adelie,Pygoscelis adeliae,20,Least Concern
+2,Gentoo,Pygoscelis papua,17,Least Concern
+3,Chinstrap,Pygoscelis antarcticus,20,Least Concern

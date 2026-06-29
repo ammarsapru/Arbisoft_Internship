@@ -15,6 +15,7 @@ The internship covers AI/ML basics, including but not limited to:
 - Sorting and searching algorithms
 - Data manipulation and analysis with NumPy and Pandas
 - Relational database design and SQL table relationships
+- Hands-on SQL querying — schema design, joins, grouping, and subqueries
 
 ## Repository Structure
 
@@ -77,3 +78,15 @@ This folder covers data manipulation with NumPy and Pandas alongside relational 
 
 **Sample Data** (`orders.csv`)
 - 40-row synthetic e-commerce dataset used across the Pandas exercises
+
+### sql practise
+
+Hands-on SQL practice in two parts — see [`sql practise/README.md`](sql%20practise/README.md) for full details.
+
+**Palmer Penguin database** (`schema.sql`, `seed_data.sql`, `data/*.csv`)
+- A 4-table relational database (`islands`, `species`, `researchers`, `observations`) built on the real Palmer Penguins dataset
+- `SCENARIO.md`, `SETUP.md` (SQLite / PostgreSQL), 20 graded exercises in `EXERCISES.md`, and full solutions in `ANSWER_KEY.sql`
+- Practice across the full lifecycle: `CREATE` → `INSERT` → `SELECT`/`JOIN`/`GROUP BY`/subqueries → `DELETE`
+
+**Table relationships** (`relationships.sql`, `many_to_many.sql`)
+- A 12-table SQL Server schema demonstrating One-to-One, One-to-Many, and Many-to-Many relationships
