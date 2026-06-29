@@ -16,6 +16,7 @@ The internship covers AI/ML basics, including but not limited to:
 - Data manipulation and analysis with NumPy and Pandas
 - Relational database design and SQL table relationships
 - Hands-on SQL querying — schema design, joins, grouping, and subqueries
+- LLM API integration and multi-model benchmarking
 
 ## Repository Structure
 
@@ -26,6 +27,26 @@ Structured weekly assignments applying the concepts covered during the internshi
 | Week | Topic | Key Deliverables | Status |
 |---|---|---|:---:|
 | [Week 1](Assignments/week1/) | Concrete Compressive Strength — regression and classification ML pipeline | Notebook, pytest tests, prompts log, evaluation metrics, confusion matrix | ✅ |
+
+### week2 — OpenRouter CLI Chat & Model Comparison
+
+A command-line chat application and benchmarking tool built on the [OpenRouter](https://openrouter.ai) API, comparing three free-tier LLMs side-by-side.
+
+| File | Purpose |
+|------|---------|
+| [`chat.py`](week2/chat.py) | Interactive CLI chat — single model or all 3 in parallel |
+| [`compare.py`](week2/compare.py) | Sends the same prompt to all 3 models; reports speed, token count, full output |
+| [`model_comparison.md`](week2/model_comparison.md) | Written analysis: speed ranking, quality scores per task type, use-case fit |
+
+**Models compared:**
+
+| Model | Provider | Params |
+|-------|----------|--------|
+| `openai/gpt-oss-120b:free` | OpenAI (OSS) | ~120B |
+| `google/gemma-4-31b-it:free` | Google DeepMind | ~31B |
+| `nvidia/nemotron-nano-9b-v2:free` | NVIDIA | ~9B |
+
+**Code quality:** Both Python files lint clean under `flake8 --max-line-length=100` (0 violations). See [week2/README.md](week2/README.md) for the full list of issues found and resolved.
 
 ### DSA_PRACTISE
 
