@@ -14,7 +14,6 @@ import requests
 API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 if not API_KEY:
     raise SystemExit("Set the OPENROUTER_API_KEY environment variable before running.")
-
 BASE_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 MODELS: Dict[str, Dict] = {
@@ -42,7 +41,7 @@ RED = "\033[31m"
 DIM = "\033[2m"
 
 
-# -- UI helpers ----------------------------------------------------------------
+# â”€â”€ UI helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def clear_line() -> None:
@@ -50,16 +49,16 @@ def clear_line() -> None:
 
 
 def print_header() -> None:
-    print(f"\n{BOLD}{CYAN}+==========================================+")
-    print("| OpenRouter CLI Chat  (v1.0)             |")
-    print(f"+==========================================+{RESET}\n")
+    print(f"\n{BOLD}{CYAN}â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—")
+    print("â•‘     OpenRouter CLI Chat  (v1.0)          â•‘")
+    print(f"â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•{RESET}\n")
 
 
 def print_models() -> None:
     print(f"{BOLD}Available models:{RESET}")
     for key, m in MODELS.items():
         print(f"  {m['color']}{key}. {m['name']}{RESET}  {DIM}({m['id']}){RESET}")
-    print(f"  {BOLD}all{RESET} - query all three simultaneously\n")
+    print(f"  {BOLD}all{RESET} â€“ query all three simultaneously\n")
 
 
 def print_help() -> None:
@@ -81,17 +80,17 @@ def print_response(result: Dict) -> None:
     color = result["color"]
     name = result["name"]
     secs = result["elapsed"]
-    bar = "-" * max(0, 42 - len(name))
-    print(f"\n{color}{BOLD}+- {name}  ({secs:.2f}s) {bar}+{RESET}")
+    bar = "â”€" * max(0, 42 - len(name))
+    print(f"\n{color}{BOLD}â”Œâ”€ {name}  ({secs:.2f}s) {bar}â”{RESET}")
     if result["error"]:
         print(f"  {RED}Error: {result['error']}{RESET}")
     else:
         for line in result["content"].split("\n"):
             print(f"  {line}")
-    print(f"{color}{BOLD}+{'-' * 52}+{RESET}")
+    print(f"{color}{BOLD}â””{'â”€' * 52}â”˜{RESET}")
 
 
-# -- API -----------------------------------------------------------------------
+# â”€â”€ API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def call_model(model_id: str, name: str, color: str, messages: List[Dict]) -> Dict:
@@ -122,7 +121,7 @@ def call_model(model_id: str, name: str, color: str, messages: List[Dict]) -> Di
                 "elapsed": time.time() - start, "error": str(exc)}
 
 
-# -- Model selection -----------------------------------------------------------
+# â”€â”€ Model selection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def select_models() -> List[str]:
@@ -133,10 +132,10 @@ def select_models() -> List[str]:
             return list(MODELS.keys())
         if choice in MODELS:
             return [choice]
-        print(f"{RED}Invalid - enter 1, 2, 3, or 'all'.{RESET}")
+        print(f"{RED}Invalid â€“ enter 1, 2, 3, or 'all'.{RESET}")
 
 
-# -- Main loop -----------------------------------------------------------------
+# â”€â”€ Main loop â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def main() -> None:
@@ -148,9 +147,7 @@ def main() -> None:
 
     if len(selected_keys) == 1:
         k = selected_keys[0]
-        print(
-            f"\n{BOLD}Chatting with: {MODELS[k]['color']}{MODELS[k]['name']}{RESET}\n"
-        )
+        print(f"\n{BOLD}Chatting with: {MODELS[k]['color']}{MODELS[k]['name']}{RESET}\n")
     else:
         names = ", ".join(
             f"{MODELS[k]['color']}{MODELS[k]['name']}{RESET}" for k in selected_keys
@@ -167,6 +164,7 @@ def main() -> None:
         if not user_input:
             continue
 
+        # â”€â”€ commands â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if user_input.startswith("/"):
             cmd = user_input.lower().split()[0]
             if cmd == "/exit":
@@ -200,35 +198,37 @@ def main() -> None:
                     print(f"{CYAN}No history yet.{RESET}")
                 else:
                     for k in selected_keys:
-                        m_color = MODELS[k]['color']
-                        m_name = MODELS[k]['name']
-                        print(f"\n{BOLD}{m_color}{m_name} history:{RESET}")
+                        print(
+                            f"\n{BOLD}{MODELS[k]['color']}"
+                            f"{MODELS[k]['name']} history:{RESET}"
+                        )
                         for msg in histories[k]:
                             if msg["role"] == "user":
                                 prefix = f"  {BOLD}You:{RESET}  "
                             else:
                                 prefix = f"  {MODELS[k]['color']}Bot:{RESET}  "
                             snippet = msg["content"][:120].replace("\n", " ")
-                            ellipsis = "..." if len(msg["content"]) > 120 else ""
+                            ellipsis = "â€¦" if len(msg["content"]) > 120 else ""
                             print(f"{prefix}{snippet}{ellipsis}")
             else:
                 print(f"{RED}Unknown command '{cmd}'. Type /help.{RESET}")
             continue
 
+        # â”€â”€ send to model(s) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         for k in selected_keys:
             histories[k].append({"role": "user", "content": user_input})
 
         if len(selected_keys) == 1:
             k = selected_keys[0]
             m = MODELS[k]
-            print(f"{DIM}Thinking...{RESET}", end="", flush=True)
+            print(f"{DIM}Thinkingâ€¦{RESET}", end="", flush=True)
             result = call_model(m["id"], m["name"], m["color"], histories[k])
             clear_line()
             print_response(result)
             if result["content"]:
                 histories[k].append({"role": "assistant", "content": result["content"]})
         else:
-            print(f"{DIM}Querying all models in parallel...{RESET}", flush=True)
+            print(f"{DIM}Querying all models in parallelâ€¦{RESET}", flush=True)
             bucket: Dict[str, Dict] = {}
             with ThreadPoolExecutor(max_workers=3) as ex:
                 futs = {
@@ -257,3 +257,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
