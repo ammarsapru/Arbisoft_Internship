@@ -1,0 +1,83 @@
+{
+  "description": "Graduated out-of-scope questions for hallucination/insufficient-context testing. The knowledge base is always the NIKE FY2023 10-K vector store (same store used everywhere else) -- retrieval will still return the top-k *nearest* Nike chunks even for these questions, because similarity search always returns something. The point is not 'no context was retrieved' but 'the retrieved context does not actually answer the question.' Every question here is expected to produce insufficient_context=true; a confident, ungrounded answer to any of these is the exact hallucination failure mode this dataset exists to catch. Tiers increase topic distance from the core knowledge base (Nike's own FY2023 10-K content) step by step.",
+  "tiers": {
+    "1": "same company, same filing, but the specific fact is not in the document (near-miss: retrieved chunks will look topically close, raising hallucination risk)",
+    "2": "adjacent domain: a competitor/peer company in the same industry",
+    "3": "unrelated domain: a different company/industry entirely, still finance/10-K shaped",
+    "4": "completely unrelated: no connection to companies, finance, or 10-Ks at all"
+  },
+  "questions": [
+    {
+      "id": "a01",
+      "tier": 1,
+      "question": "What was NIKE's closing stock price on December 31, 2023?",
+      "rationale": "Real Nike, real fiscal year, but a stock-price data point a 10-K narrative doesn't report (10-Ks cover the fiscal year ended May 31, 2023, and don't quote daily market stock prices)."
+    },
+    {
+      "id": "a02",
+      "tier": 1,
+      "question": "How many total shares of NIKE stock were traded on the NYSE during fiscal 2023?",
+      "rationale": "Same company and filing, but daily/annual trading volume is not something the 10-K narrative sections discuss."
+    },
+    {
+      "id": "a03",
+      "tier": 1,
+      "question": "What is the name of NIKE's current Chief Marketing Officer?",
+      "rationale": "Real Nike topic (personnel), but an executive title/name not enumerated in the 10-K body text."
+    },
+    {
+      "id": "a04",
+      "tier": 2,
+      "question": "What was Adidas's total revenue in fiscal 2023?",
+      "rationale": "Same industry (athletic apparel/footwear), direct competitor, but a different company entirely -- not in this document."
+    },
+    {
+      "id": "a05",
+      "tier": 2,
+      "question": "How many employees does Under Armour have worldwide?",
+      "rationale": "Adjacent apparel-industry company; topically close enough that retrieval may still surface Nike's own employee-count chunk, testing whether the model conflates the two."
+    },
+    {
+      "id": "a06",
+      "tier": 2,
+      "question": "What is Puma's gross margin for its most recent fiscal year?",
+      "rationale": "Same industry, same kind of financial metric NIKE reports, different company."
+    },
+    {
+      "id": "a07",
+      "tier": 3,
+      "question": "What was Tesla's revenue in fiscal year 2023?",
+      "rationale": "Different industry entirely (automotive vs. apparel), but still a 10-K-shaped financial question, so retrieval may still return Nike's revenue chunks by generic semantic similarity."
+    },
+    {
+      "id": "a08",
+      "tier": 3,
+      "question": "What was Apple's effective tax rate in its most recent annual report?",
+      "rationale": "Different industry, same category of fact (effective tax rate) that NIKE's own 10-K happens to report -- tests whether topical shape alone (not company identity) fools the model."
+    },
+    {
+      "id": "a09",
+      "tier": 3,
+      "question": "How many distribution centers does Amazon operate in the United States?",
+      "rationale": "Different industry, same fact category (distribution centers) NIKE's 10-K reports -- another topical-shape trap."
+    },
+    {
+      "id": "a10",
+      "tier": 4,
+      "question": "What is the recipe for chocolate chip cookies?",
+      "rationale": "No relation whatsoever to companies, finance, or 10-Ks. The easiest case -- retrieved Nike chunks should be obviously irrelevant."
+    },
+    {
+      "id": "a11",
+      "tier": 4,
+      "question": "Who won the FIFA World Cup in 2022?",
+      "rationale": "Completely unrelated domain, though it does touch sports, which is thematically adjacent to an athletic-apparel company -- worth checking whether that thin thematic link raises hallucination risk over a11/a12."
+    },
+    {
+      "id": "a12",
+      "tier": 4,
+      "question": "What is the capital city of France?",
+      "rationale": "Maximum topic distance: no plausible semantic link to Nike, apparel, sports, or financial filings at all."
+    }
+  ]
+}

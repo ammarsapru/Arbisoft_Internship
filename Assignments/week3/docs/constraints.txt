@@ -1,0 +1,205 @@
+CONSTRAINTS ENFORCED IN THIS RAG PIPELINE
+============================================
+(Snapshot of the actual repo state — grep-verified, not aspirational.)
+
+Organized by where each constraint lives and whether it's a HARD gate
+(rejects/blocks bad output in code) or a SOFT expectation (a prompt
+instruction the model can ignore, or a post-hoc report that doesn't block
+anything).
+
+
+1. PROMPT-LEVEL CONSTRAINTS (soft — instructions to the LLM, not code-checked)
+--------------------------------------------------------------------------------
+Source: SYSTEM_PROMPT + USER_PROMPT_TEMPLATE in rag_pipeline.py (as of the
+2026-07-07 prompt restructure -- previously one single-blob PROMPT_TEMPLATE
+string; now a SystemMessage + a separate HumanMessage, see tracker.txt for
+the measured before/after impact of this change).
+
+  SystemMessage (persona, capabilities, hard behavioral rules, output
+  contract -- sent once, identical every call):
+    - Identity: "NikeFilingGPT," NIKE's FY2023 10-K report generator.
+    - Can only use the RETRIEVED CONTEXT given in the human message that
+      same turn; cannot use outside/general/training knowledge.
+    - Cannot discuss any company other than NIKE, or any fiscal
+      year/filing other than what's in the retrieved context.
+    - Must refuse (insufficient_context=true, confidence<=0.2,
+      citations=[]) in two named situations, each with a worked example:
+        1. retrieved context lacks substance relevant to the question
+           (retrieval always returns its k nearest chunks even when none
+           are actually relevant -- a high similarity score is not a
+           relevance guarantee).
+        2. the question is outside the system's domain entirely (a
+           different company, a different time period, general
+           knowledge) -- refuse regardless of what was retrieved.
+    - Output contract: single JSON object, no prose, matching RAGAnswer's
+      shape.
+
+  HumanMessage (per-question data, structurally separated from the rules
+  above into two labeled sections):
+    - "### RETRIEVED CONTEXT": each chunk labeled with its page AND its
+      cosine similarity score (via similarity_search_with_score, not
+      similarity_search), so the model has direct numeric relevance
+      signal instead of only text.
+    - "### USER QUESTION": the question, alone, in its own section.
+
+These are still requests, not guarantees — nothing in code enforces
+"confidence <= 0.2 when insufficient_context = true," "the quote is
+actually verbatim," or that the model actually obeys the two refusal
+rules. The model can violate any of these and still produce schema-valid
+JSON. That gap is exactly why hallucination.py exists as an independent
+second layer (see section 4) — and per tracker.txt, this system/user split
+measurably reduced (but did not eliminate) how often the model violates
+these rules: refusal_rate went from 0.0 to 0.5 and hallucination_rate from
+0.583 to 0.083 on the adversarial eval set.
+
+
+2. SCHEMA-LEVEL CONSTRAINTS (hard — Pydantic, blocking)
+------------------------------------------------------------
+Source: schemas.py (RAGAnswer, Citation), enforced via parse_llm_output()
+
+  - Output must be valid JSON (json.loads succeeds).
+  - Output must be a JSON object (dict), not an array/string/number.
+  - extra="forbid": no fields beyond the ones declared. An LLM inventing an
+    extra field (e.g. "sources") is rejected outright.
+  - strict=True: no type coercion. "30" is not accepted where int is
+    expected; "false"/"no" is not accepted where bool is expected.
+  - answer: string, min_length=1 (non-empty).
+  - citations: must be a list; each item validated as a Citation.
+  - Citation.page: int, >= 0.
+  - Citation.quote: string, min_length=1.
+  - confidence: float, 0.0 <= confidence <= 1.0.
+  - insufficient_context: bool (defaults to False if the model omits it).
+
+Any violation raises SchemaValidationError. This is the ONLY hard gate in
+the system that fully blocks an output from being treated as usable —
+everything else is either a prompt request (section 1) or a non-blocking
+report (section 4).
+
+
+3. DECODING-LEVEL CONSTRAINT (hard when enabled; absent otherwise)
+------------------------------------------------------------------------
+Source: rag_pipeline.py call_llm(), format=RAGAnswer.model_json_schema()
+
+  - When constrained=True (the default), Ollama's structured-output feature
+    constrains token sampling to match RAGAnswer's JSON schema DURING
+    generation — the model cannot emit non-conforming JSON at the token
+    level.
+  - When constrained=False, there is zero decoding-time enforcement; raw
+    output is only checked after the fact by section 2's schema gate. This
+    mode exists specifically to measure how often the model breaks the
+    contract on its own (see tests/test_live_llm.py,
+    test_unconstrained_output_is_still_validated).
+
+
+4. GROUNDING / FAITHFULNESS CHECKS (soft — detectors, NOT blocking)
+-------------------------------------------------------------------------
+Source: hallucination.py, run only on schema-valid answers
+
+  - check_citation_pages: every cited page must be among the pages that
+    were actually retrieved for this question.
+  - check_quotes_grounded: every citation quote must appear (after
+    whitespace/case normalization) in the retrieved text for that page.
+  - check_numbers_grounded: every numeric token in the answer must appear
+    somewhere in the retrieved context (after stripping thousands
+    separators).
+
+IMPORTANT: these checks do NOT reject, retry, or discard the answer. A
+"grounded": false result is still saved and returned exactly like a
+grounded one — it's a recorded signal for offline analysis, not an
+enforced gate. There is no code path that regenerates or drops an
+ungrounded answer.
+
+
+5. GENERATION QUALITY METRICS (soft — measured and recorded, NOT blocking)
+-----------------------------------------------------------------------------
+Source: generation_metrics.py + generation_eval.py, run against the real
+pipeline for every question in eval_dataset.json (14/14 questions, real
+Ollama calls, results in results/generation_eval.json)
+
+  - correctness_keyword_coverage: fraction of eval_dataset.json's
+    "answer_keywords" found verbatim (normalized) in the generated answer.
+  - correctness_semantic: cosine similarity (qwen3-embedding) between the
+    generated answer and the human-written "reference_answer".
+  - relevance_semantic: cosine similarity between the question and the
+    generated answer — independent of whether the answer is correct or
+    grounded, this measures "did it address what was asked."
+  - faithfulness: reuses hallucination.grounding_report()'s "grounded"
+    boolean, exposed here as a 0.0/1.0 metric alongside correctness/
+    relevance so all three generation axes are measured together.
+  None of these block or retry anything — same non-blocking posture as
+  section 4's grounding checks.
+
+Real measured result, RUN B / current (qwen2.5:1.5b, 2026-07-07, after the
+system+user prompt restructure): mean_faithfulness=0.929,
+mean_correctness_keyword_coverage=0.691, mean_correctness_semantic=0.739,
+mean_relevance_semantic=0.800, 0/14 schema errors. (Prior single-blob-
+prompt run, kept for comparison: mean_faithfulness=0.5,
+mean_correctness_keyword_coverage=0.476, mean_correctness_semantic=0.657,
+mean_relevance_semantic=0.682.) Every metric improved after separating the
+system message (rules) from the human message (context + question) — see
+tracker.txt for the full before/after breakdown.
+
+
+6. ADVERSARIAL / GRADUATED-DISTANCE HALLUCINATION TESTING (now implemented)
+-----------------------------------------------------------------------------
+Source: adversarial_eval_dataset.json (12 questions, 4 tiers of increasing
+topic distance from the Nike FY2023 10-K) + hallucination_eval.py, run
+against the real pipeline (results in results/hallucination_eval.json)
+
+Each question is expected to trigger insufficient_context=true, since the
+Nike 10-K vector store cannot contain the answer regardless of query.
+
+Real measured result, RUN B / current (qwen2.5:1.5b, 2026-07-07, after the
+system+user prompt restructure with explicit refusal rules + worked
+examples):
+  refusal_rate = 0.5 overall (6/12 correctly triggered insufficient_context).
+  hallucination_rate = 0.083 overall (1/12, down from 7/12).
+  answered_but_grounded_rate = 0.417 overall, UNCHANGED from before the
+  restructure (5/12 — see section 7, this is the residual gap the prompt
+  change did not fix).
+  Per tier, refusal was actually HIGHER at tiers 1-2 (0.667 each, near-miss
+  and adjacent-industry) than tiers 3-4 (0.333 each, unrelated-industry and
+  totally unrelated) — counter to the naive expectation. At tiers 3-4 the
+  model mostly stopped hallucinating but pivoted to answering with an
+  unrelated-but-real, correctly-cited NIKE fact instead of refusing,
+  rather than actually refusing more often.
+
+Prior result, RUN A / single-blob prompt (kept for comparison):
+  refusal_rate = 0.0 across ALL FOUR TIERS (0/12 questions correctly
+  triggered insufficient_context — including "What is the capital city of
+  France?", the maximally unrelated tier-4 case).
+  hallucination_rate = 0.583 overall (7/12).
+  answered_but_grounded_rate = 0.417 overall (5/12).
+
+This is a real, load-bearing finding either way: separating system rules
+from human-turn data (with explicit named refusal situations and worked
+examples) is a measurable, substantial fix for the most dangerous failure
+mode (confident, fabricated hallucination), but it did not fully solve
+"refuses when it should" — see section 7.
+
+
+7. WHAT IS STILL NOT CONSTRAINED / NOT ENFORCED
+-----------------------------------------------------------------------------
+  - "answered_but_grounded" (answering an out-of-domain question by
+    pivoting to a real, correctly-cited NIKE fact instead of refusing) is
+    unchanged at 0.417 before and after the prompt restructure. Nothing in
+    the system prompt currently forbids substituting a different real fact
+    for the one actually asked about — the rules say "don't use outside
+    knowledge" and "refuse if out of domain," but a model that answers
+    with genuine, grounded NIKE content technically isn't using outside
+    knowledge, so it doesn't clearly violate rule 1, even though it's
+    still answering a question that should have been refused under rule
+    2. This is the next prompt-hardening target, not a solved problem.
+  - No retry-on-schema-failure loop: if parse_llm_output raises, the
+    pipeline records status="schema_error" and stops for that question — it
+    does not re-prompt the model with the validation error to try again.
+    The only retry loop in the codebase is store_utils.build_vector_store's
+    retry around transient Ollama *embedding-call* failures (batching +
+    linear backoff), which is an infra-reliability retry, not an
+    output-validation retry.
+  - Nothing acts on the section 5/6 measurements — a low-faithfulness or
+    hallucinated answer is recorded, not rejected, retried, or routed
+    anywhere. These are offline-analysis metrics, not runtime gates. Given
+    section 6's 0% refusal rate finding, promoting insufficient_context (or
+    a faithfulness threshold) into an actual blocking gate would be a
+    reasonable next step, not something this snapshot does.

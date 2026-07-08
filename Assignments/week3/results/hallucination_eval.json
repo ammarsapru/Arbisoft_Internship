@@ -1,0 +1,282 @@
+{
+  "model": "qwen2.5:1.5b",
+  "overall": {
+    "num_questions": 12,
+    "refusal_rate": 1.0,
+    "hallucination_rate": 0.0,
+    "answered_but_grounded_rate": 0.0,
+    "schema_error_rate": 0.0,
+    "self_check_override_rate": 0.417,
+    "outcome_counts": {
+      "correctly_refused": 12
+    }
+  },
+  "by_tier": {
+    "1": {
+      "description": "same company, same filing, but the specific fact is not in the document (near-miss: retrieved chunks will look topically close, raising hallucination risk)",
+      "num_questions": 3,
+      "refusal_rate": 1.0,
+      "hallucination_rate": 0.0,
+      "answered_but_grounded_rate": 0.0,
+      "schema_error_rate": 0.0,
+      "self_check_override_rate": 0.333,
+      "outcome_counts": {
+        "correctly_refused": 3
+      }
+    },
+    "2": {
+      "description": "adjacent domain: a competitor/peer company in the same industry",
+      "num_questions": 3,
+      "refusal_rate": 1.0,
+      "hallucination_rate": 0.0,
+      "answered_but_grounded_rate": 0.0,
+      "schema_error_rate": 0.0,
+      "self_check_override_rate": 0.333,
+      "outcome_counts": {
+        "correctly_refused": 3
+      }
+    },
+    "3": {
+      "description": "unrelated domain: a different company/industry entirely, still finance/10-K shaped",
+      "num_questions": 3,
+      "refusal_rate": 1.0,
+      "hallucination_rate": 0.0,
+      "answered_but_grounded_rate": 0.0,
+      "schema_error_rate": 0.0,
+      "self_check_override_rate": 0.333,
+      "outcome_counts": {
+        "correctly_refused": 3
+      }
+    },
+    "4": {
+      "description": "completely unrelated: no connection to companies, finance, or 10-Ks at all",
+      "num_questions": 3,
+      "refusal_rate": 1.0,
+      "hallucination_rate": 0.0,
+      "answered_but_grounded_rate": 0.0,
+      "schema_error_rate": 0.0,
+      "self_check_override_rate": 0.667,
+      "outcome_counts": {
+        "correctly_refused": 3
+      }
+    }
+  },
+  "per_question": [
+    {
+      "id": "a01",
+      "tier": 1,
+      "question": "What was NIKE's closing stock price on December 31, 2023?",
+      "rationale": "Real Nike, real fiscal year, but a stock-price data point a 10-K narrative doesn't report (10-Ks cover the fiscal year ended May 31, 2023, and don't quote daily market stock prices).",
+      "status": "ok",
+      "outcome": "correctly_refused",
+      "insufficient_context": true,
+      "confidence": 0.9,
+      "grounded": true,
+      "answer": "The closing stock price of NIKE on December 31, 2023, is not provided in the FY2023 Form 10-K filing.",
+      "self_check": {
+        "ran": false,
+        "verdict": null,
+        "overridden": false,
+        "retried": false
+      }
+    },
+    {
+      "id": "a02",
+      "tier": 1,
+      "question": "How many total shares of NIKE stock were traded on the NYSE during fiscal 2023?",
+      "rationale": "Same company and filing, but daily/annual trading volume is not something the 10-K narrative sections discuss.",
+      "status": "ok",
+      "outcome": "correctly_refused",
+      "insufficient_context": true,
+      "confidence": 0.5622,
+      "grounded": true,
+      "answer": "The number of total shares of NIKE stock traded on the New York Stock Exchange (NYSE) during fiscal 2023 is not provided in the retrieved context.",
+      "self_check": {
+        "ran": false,
+        "verdict": null,
+        "overridden": false,
+        "retried": false
+      }
+    },
+    {
+      "id": "a03",
+      "tier": 1,
+      "question": "What is the name of NIKE's current Chief Marketing Officer?",
+      "rationale": "Real Nike topic (personnel), but an executive title/name not enumerated in the 10-K body text.",
+      "status": "ok",
+      "outcome": "correctly_refused",
+      "insufficient_context": true,
+      "confidence": 0.1,
+      "grounded": true,
+      "answer": "The retrieved context does not contain information that directly answers this question.",
+      "self_check": {
+        "ran": true,
+        "verdict": "REJECT",
+        "overridden": true,
+        "retried": true
+      }
+    },
+    {
+      "id": "a04",
+      "tier": 2,
+      "question": "What was Adidas's total revenue in fiscal 2023?",
+      "rationale": "Same industry (athletic apparel/footwear), direct competitor, but a different company entirely -- not in this document.",
+      "status": "ok",
+      "outcome": "correctly_refused",
+      "insufficient_context": true,
+      "confidence": 0.2,
+      "grounded": true,
+      "answer": "Adidas is not mentioned in the FY2023 10-K filing of NIKE Inc., so there is insufficient context to answer this question.",
+      "self_check": {
+        "ran": false,
+        "verdict": null,
+        "overridden": false,
+        "retried": false
+      }
+    },
+    {
+      "id": "a05",
+      "tier": 2,
+      "question": "How many employees does Under Armour have worldwide?",
+      "rationale": "Adjacent apparel-industry company; topically close enough that retrieval may still surface Nike's own employee-count chunk, testing whether the model conflates the two.",
+      "status": "ok",
+      "outcome": "correctly_refused",
+      "insufficient_context": true,
+      "confidence": 0.1,
+      "grounded": true,
+      "answer": "The retrieved context does not contain information that directly answers this question.",
+      "self_check": {
+        "ran": true,
+        "verdict": "REJECT",
+        "overridden": true,
+        "retried": true
+      }
+    },
+    {
+      "id": "a06",
+      "tier": 2,
+      "question": "What is Puma's gross margin for its most recent fiscal year?",
+      "rationale": "Same industry, same kind of financial metric NIKE reports, different company.",
+      "status": "ok",
+      "outcome": "correctly_refused",
+      "insufficient_context": true,
+      "confidence": 0.2,
+      "grounded": true,
+      "answer": "Puma does not provide information on their gross margin for their most recent fiscal year.",
+      "self_check": {
+        "ran": false,
+        "verdict": null,
+        "overridden": false,
+        "retried": false
+      }
+    },
+    {
+      "id": "a07",
+      "tier": 3,
+      "question": "What was Tesla's revenue in fiscal year 2023?",
+      "rationale": "Different industry entirely (automotive vs. apparel), but still a 10-K-shaped financial question, so retrieval may still return Nike's revenue chunks by generic semantic similarity.",
+      "status": "ok",
+      "outcome": "correctly_refused",
+      "insufficient_context": true,
+      "confidence": 0.9,
+      "grounded": false,
+      "answer": "The FY2023 Form 10-K filing does not provide specific revenue figures for Tesla.",
+      "self_check": {
+        "ran": true,
+        "verdict": null,
+        "overridden": false,
+        "retried": true
+      }
+    },
+    {
+      "id": "a08",
+      "tier": 3,
+      "question": "What was Apple's effective tax rate in its most recent annual report?",
+      "rationale": "Different industry, same category of fact (effective tax rate) that NIKE's own 10-K happens to report -- tests whether topical shape alone (not company identity) fools the model.",
+      "status": "ok",
+      "outcome": "correctly_refused",
+      "insufficient_context": true,
+      "confidence": 0.5,
+      "grounded": true,
+      "answer": "Apple does not provide information about their effective tax rate in the FY2023 10-K filing.",
+      "self_check": {
+        "ran": false,
+        "verdict": null,
+        "overridden": false,
+        "retried": false
+      }
+    },
+    {
+      "id": "a09",
+      "tier": 3,
+      "question": "How many distribution centers does Amazon operate in the United States?",
+      "rationale": "Different industry, same fact category (distribution centers) NIKE's 10-K reports -- another topical-shape trap.",
+      "status": "ok",
+      "outcome": "correctly_refused",
+      "insufficient_context": true,
+      "confidence": 0.1,
+      "grounded": true,
+      "answer": "The retrieved context does not contain information that directly answers this question.",
+      "self_check": {
+        "ran": true,
+        "verdict": "REJECT",
+        "overridden": true,
+        "retried": true
+      }
+    },
+    {
+      "id": "a10",
+      "tier": 4,
+      "question": "What is the recipe for chocolate chip cookies?",
+      "rationale": "No relation whatsoever to companies, finance, or 10-Ks. The easiest case -- retrieved Nike chunks should be obviously irrelevant.",
+      "status": "ok",
+      "outcome": "correctly_refused",
+      "insufficient_context": true,
+      "confidence": 0.1,
+      "grounded": true,
+      "answer": "The retrieved context does not contain information that directly answers this question.",
+      "self_check": {
+        "ran": true,
+        "verdict": "REJECT",
+        "overridden": true,
+        "retried": true
+      }
+    },
+    {
+      "id": "a11",
+      "tier": 4,
+      "question": "Who won the FIFA World Cup in 2022?",
+      "rationale": "Completely unrelated domain, though it does touch sports, which is thematically adjacent to an athletic-apparel company -- worth checking whether that thin thematic link raises hallucination risk over a11/a12.",
+      "status": "ok",
+      "outcome": "correctly_refused",
+      "insufficient_context": true,
+      "confidence": 0.0,
+      "grounded": true,
+      "answer": "The user is asking about a sports event (FIFA World Cup) that occurred in 2022, not related to NIKE's FY2023 10-K filing. Therefore, I cannot provide an answer based on the retrieved context.",
+      "self_check": {
+        "ran": false,
+        "verdict": null,
+        "overridden": false,
+        "retried": false
+      }
+    },
+    {
+      "id": "a12",
+      "tier": 4,
+      "question": "What is the capital city of France?",
+      "rationale": "Maximum topic distance: no plausible semantic link to Nike, apparel, sports, or financial filings at all.",
+      "status": "ok",
+      "outcome": "correctly_refused",
+      "insufficient_context": true,
+      "confidence": 0.1,
+      "grounded": true,
+      "answer": "The retrieved context does not contain information that directly answers this question.",
+      "self_check": {
+        "ran": true,
+        "verdict": "REJECT",
+        "overridden": true,
+        "retried": true
+      }
+    }
+  ]
+}

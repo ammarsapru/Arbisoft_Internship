@@ -1,0 +1,191 @@
+EVAL RESULTS TRACKER
+========================
+All numbers below are from real runs against the local Ollama server
+(embedding models: qwen3-embedding:0.6b, snowflake-arctic-embed:latest;
+chat model: qwen2.5:1.5b). Nothing here is simulated or estimated.
+
+Four generations of results are recorded, each a real, independent run:
+  RUN A (2026-07-07, single-blob prompt) -- one plain string passed to
+    ChatOllama.invoke(), persona + rules + context + question all mashed
+    into a single user turn (PROMPT_TEMPLATE, since removed).
+  RUN B (2026-07-07, system+user prompt split) -- SystemMessage (persona,
+    capabilities, hard constraints, output contract) + HumanMessage
+    (RETRIEVED CONTEXT with per-chunk relevance scores, distinct from a
+    USER QUESTION section). Grounding checks: citation_pages,
+    quotes_grounded, numbers_grounded only.
+  RUN C (2026-07-08, citations-required + unconditional auto-reject) --
+    added hallucination.check_citations_required (an answer claiming
+    sufficient context must cite something) and a self-check step that
+    deterministically discarded any answer with zero citations, no retry.
+    KEPT HERE AS A CAUTIONARY DATA POINT, NOT THE SHIPPED DESIGN -- see
+    section 4.
+  RUN D (2026-07-08, bounded retry-with-feedback loop) -- CURRENT / SHIPPED.
+    Same citations-required check, but self-check now gives the model one
+    retry with the specific rejection reason fed back before falling back
+    to a deterministic refusal. See rag_pipeline.py MAX_ATTEMPTS,
+    verify_answer, RETRY_SUFFIX_TEMPLATE.
+Retrieval numbers are identical across all four runs (nothing about
+retrieval/embeddings changed), so retrieval is listed once.
+
+
+1. RETRIEVAL EVAL  (results/retrieval_eval.json, retrieval_eval.py)
+------------------------------------------------------------------------
+14 questions from eval_dataset.json, binary relevance (expected_pages),
+metrics at k = 1, 3, 5, 10.
+
+qwen3-embedding:0.6b (winner at every k, every metric):
+  k=1:  hit_rate=0.714  precision=0.714  recall=0.405  mrr=0.714  ndcg=0.714
+  k=3:  hit_rate=0.857  precision=0.452  recall=0.702  mrr=0.762  ndcg=0.730
+  k=5:  hit_rate=0.857  precision=0.343  recall=0.738  mrr=0.762  ndcg=0.806
+  k=10: hit_rate=0.857  precision=0.257  recall=0.798  mrr=0.762  ndcg=0.934
+  avg_query_seconds=0.308   index_seconds=96.8
+
+snowflake-arctic-embed:latest:
+  k=1:  hit_rate=0.429  precision=0.429  recall=0.244  mrr=0.429  ndcg=0.429
+  k=3:  hit_rate=0.643  precision=0.262  recall=0.458  mrr=0.512  ndcg=0.448
+  k=5:  hit_rate=0.714  precision=0.200  recall=0.542  mrr=0.530  ndcg=0.488
+  k=10: hit_rate=0.786  precision=0.164  recall=0.655  mrr=0.538  ndcg=0.623
+  avg_query_seconds=0.166   index_seconds=49.5
+
+Takeaway: qwen3-embedding:0.6b is the clear retrieval winner at every k on
+every metric (e.g. ndcg@5 0.806 vs 0.488), despite being ~2x slower to
+index. It's what the generation/hallucination pipeline uses by default
+(get_qwen_embed() in rag_pipeline.py).
+
+
+2. GENERATION EVAL  (results/generation_eval.json, generation_eval.py)
+------------------------------------------------------------------------
+14 questions from eval_dataset.json, real chat model calls, faithfulness
+(from grounding_report), correctness (keyword coverage + semantic
+similarity to reference_answer), relevance (semantic similarity to
+question).
+
+                            A(blob)  B(sys+user)  C(auto-reject)  D(retry loop)
+schema_error_rate            0.0       0.0           0.0             0.0
+mean_faithfulness             0.500     0.929         1.000           0.571
+mean_correctness_keyword      0.476     0.691         0.000           0.583
+mean_correctness_semantic     0.657     0.739         0.263           0.712
+mean_relevance_semantic       0.682     0.800         0.339           0.775
+mean_llm_seconds               4.944     5.311         4.576           8.371
+self_check_override_rate       n/a       n/a           1.000           0.071
+
+Takeaway, A -> B: every generation-quality metric improved after
+restructuring the prompt into system+user, faithfulness most (+0.429).
+
+Takeaway, B -> C -> D (the citations-required story): Run C's
+mean_faithfulness=1.000 is FAKE -- it's 100% because every single answer
+that lacked a citation was unconditionally discarded and replaced with a
+canned refusal (self_check_override_rate=1.000), which trivially "passes"
+grounding since a refusal has nothing to check. correctness_keyword
+cratered to 0.000 because all 14 real answers were thrown away, including
+ones that were actually correct. Run D fixes this: same underlying
+citations-required rule, but the model gets ONE retry with the specific
+rejection reason fed back before any discard happens. Result:
+self_check_override_rate dropped to 0.071 (only 1/14 genuinely
+undecidable), and correctness_keyword recovered to 0.583 -- most answers
+that initially omitted a citation successfully added one on retry rather
+than being thrown away. mean_faithfulness=0.571 in Run D is LOWER than
+Run B's 0.929, but Run B's number was inflated by the vacuous-pass bug
+(see section 4) -- 0.571 is the first honest faithfulness measurement in
+this tracker, not a regression.
+
+
+3. HALLUCINATION EVAL  (results/hallucination_eval.json, hallucination_eval.py)
+------------------------------------------------------------------------------
+12 questions from adversarial_eval_dataset.json across 4 tiers of
+increasing topic distance from the Nike FY2023 10-K (tier 1: same
+company/filing, fact just absent -> tier 4: totally unrelated, e.g.
+"capital of France"). Every question should trigger
+insufficient_context=true; retrieval always returns Nike's k nearest
+chunks regardless of query, so a good pipeline must judge relevance
+itself rather than trust that "context was retrieved" means "context is
+useful."
+
+OVERALL:
+                          A(blob)  B(sys+user)  D(retry loop, current)
+  refusal_rate              0.000     0.500        1.000
+  hallucination_rate        0.583     0.083        0.000
+  answered_but_grounded     0.417     0.417        0.000
+  schema_error_rate         0.000     0.000        0.000
+  self_check_override_rate    n/a       n/a        0.417
+  outcome_counts        hallucinated=7  correctly_refused=6   correctly_refused=12
+                    answered_but_grounded=5  answered_but_grounded=5
+                                             hallucinated=1
+
+BY TIER (Run D, current):
+  tier 1 (near-miss, same filing):          refusal=1.000  hallucination=0.000  self_check_override=0.333
+  tier 2 (adjacent industry):               refusal=1.000  hallucination=0.000  self_check_override=0.333
+  tier 3 (unrelated industry, 10-K-shaped): refusal=1.000  hallucination=0.000  self_check_override=0.333
+  tier 4 (totally unrelated):               refusal=1.000  hallucination=0.000  self_check_override=0.667
+
+Takeaway: Run D reaches 100% refusal_rate, 0% hallucination_rate, and 0%
+answered_but_grounded across ALL 12 adversarial questions and ALL 4 tiers
+-- the "answer with a real-but-unrelated NIKE fact instead of refusing"
+failure mode flagged as a residual gap after Run B (a02 Adidas, a09
+Amazon, a10 cookie recipe, a12 capital of France) is fully closed in this
+run. self_check_override_rate (0.417 overall, higher at tier 4 at 0.667)
+shows the retry loop is doing real, visible work: roughly 40% of
+adversarial answers needed the citations-required check + retry/override
+mechanism to actually catch what the system prompt's own refusal
+instructions alone did not.
+
+Progression across all three runs on the SAME 12-question adversarial set:
+  A: 0% refusal, 58% hallucination        (single-blob prompt)
+  B: 50% refusal, 8% hallucination         (+ system/user split)
+  D: 100% refusal, 0% hallucination        (+ citations-required + retry loop)
+Two independent, additive interventions -- prompt structure, then a
+citations-backed self-check loop -- together took hallucination from
+majority-of-the-time to zero on this eval set.
+
+
+4. ROOT CAUSE: THE VACUOUS-PASS BUG (why Run B's faithfulness was inflated)
+--------------------------------------------------------------------------------
+Direct evidence (results/hallucination_eval.json under Run B, before this
+fix): asking "What is the capital city of France?" got citations=[],
+insufficient_context=False, and grounded=True. The three original
+grounding checks (check_citation_pages, check_quotes_grounded,
+check_numbers_grounded) all iterate over answer.citations or the answer's
+numeric tokens -- with zero citations and zero numbers, each check has
+nothing to inspect and returns no issues, so a fully fabricated answer
+registered as "grounded" purely because nothing was ever actually
+checked. Confirmed live (see conversation): the exact citations=[] /
+grounded=True pairing was reproduced on demand for both the cookie-recipe
+and capital-of-France questions.
+
+Fix, in two layers:
+  (a) hallucination.check_citations_required (deterministic, non-blocking
+      detector, always on): if insufficient_context is False and
+      citations is empty, that's now itself flagged as a grounding issue.
+      This alone fixed the DETECTION problem and is why Run B's inflated
+      0.929/1.000-style faithfulness numbers are no longer possible --
+      grounding now honestly reflects whether evidence was ever provided.
+  (b) rag_pipeline self-check loop (verify_answer + MAX_ATTEMPTS=2): fixes
+      the RESPONSE problem -- rather than just detecting and discarding,
+      the model gets fed the specific rejection reason and one chance to
+      correct it (add a citation, or admit insufficient_context) before a
+      deterministic refusal is used as the last resort. Trying (a) alone
+      with an unconditional discard-on-reject policy (Run C) was measured
+      to be actively harmful -- it discarded 100% of in-scope answers,
+      including correct ones, because this 1.5B model frequently omits
+      citations regardless of whether its answer content is right. The
+      retry loop (Run D) is what makes the fix net-positive instead of
+      just trading one failure mode (silent fabrication) for another
+      (silent data loss).
+
+
+5. TEST SUITE STATUS (2026-07-08, current)
+------------------------------------------------------------------------
+  Hermetic (default, `pytest`):        53 passed, 0 failed  (~6s)
+  Live (`pytest -m live`, real Ollama): 7 passed, 0 failed   (~6min)
+  Live suite covers: schema-valid output under constrained decoding,
+  grounding reports always present (now with the citations_required check
+  key), unconstrained mode never crashes the pipeline, generation_eval
+  metrics land in valid ranges, and hallucination_eval produces a valid
+  outcome classification across all 4 adversarial tiers -- all against the
+  real, current pipeline (system+user prompt + citations-required check +
+  bounded retry-with-feedback self-check loop).
+
+
+See constraints.txt for the full enforcement model (what's a hard gate vs.
+a prompt request vs. a non-blocking detector) and workflow.txt for the
+end-to-end pipeline this tracker's numbers came from.

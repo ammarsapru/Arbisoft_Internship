@@ -1,0 +1,190 @@
+LANGCHAIN — WHAT IT IS AND HOW IT WORKS
+=========================================
+
+1. WHAT PROBLEM IT SOLVES
+--------------------------
+Building an LLM application means wiring together several different kinds of
+moving parts: a model provider (OpenAI, Anthropic, Ollama, etc.), a prompt,
+maybe a vector database, maybe a set of tools/functions the model can call,
+memory of past turns, and some output parsing. Every provider has its own
+SDK with its own request/response shapes. LangChain's job is to give all of
+these pieces a common set of interfaces so you can swap one implementation
+for another (e.g. switch from OpenAI to a local Ollama model) without
+rewriting the rest of your application.
+
+It is not a model itself, not a database itself, and not magic — it's a
+framework of interfaces + integrations + a small orchestration layer on top.
+
+
+2. THE PACKAGE SPLIT
+---------------------
+Modern LangChain is split into several packages, which is a common source of
+confusion:
+
+  langchain-core        Base abstractions and interfaces: Document,
+                         BaseChatModel, Embeddings, VectorStore, Runnable,
+                         BaseMessage, etc. Almost nothing here talks to a
+                         real network endpoint.
+
+  langchain              Higher-level chains, agents, and generic utilities
+                         built on langchain-core. Provider-agnostic glue.
+
+  langchain-text-splitters
+                         Standalone text-splitting utilities (used to chunk
+                         documents before embedding them).
+
+  Provider packages      langchain-openai, langchain-ollama, langchain-anthropic,
+                         langchain-community, etc. Each implements the
+                         core interfaces (BaseChatModel, Embeddings, ...)
+                         against one specific provider's API.
+
+This split means "langchain-ollama" only needs to implement a handful of
+abstract methods (like `_generate` or `embed_documents`) and the rest of the
+ecosystem (chains, retrievers, output parsers) works with it for free.
+
+
+3. CORE ABSTRACTIONS
+---------------------
+
+Document
+  A tiny container: `page_content` (the text) + `metadata` (a dict of
+  arbitrary key/value info — source file, page number, URL, etc.). Almost
+  everything in LangChain's retrieval stack passes Document objects around.
+  It's the lingua franca between loaders, splitters, embedders, and vector
+  stores.
+
+Embeddings (interface)
+  Any class implementing `embed_documents(list[str]) -> list[list[float]]`
+  and `embed_query(str) -> list[float]`. Turns text into vectors. Concrete
+  implementations call out to a specific embedding model/provider.
+
+VectorStore (interface)
+  Something that can store embedded Documents and answer similarity
+  queries: `add_documents(...)`, `similarity_search(query, k=...)`,
+  `similarity_search_with_score(...)`. Implementations range from pure
+  in-memory arrays to wrappers around Pinecone, Chroma, FAISS, pgvector,
+  Milvus, etc. Swapping the backing store means changing one line, because
+  everything else talks to the VectorStore interface, not the underlying
+  database's native API.
+
+Text Splitters
+  Utilities that break long documents into smaller chunks sized to fit in
+  a model's context window / to keep embeddings semantically focused.
+  RecursiveCharacterTextSplitter is the most commonly used: it tries to
+  split on paragraph breaks first, then sentences, then words, only
+  falling back to a hard character cut as a last resort, so chunks stay as
+  semantically coherent as possible. `chunk_overlap` repeats a bit of text
+  between adjacent chunks so an idea that spans a chunk boundary isn't lost
+  entirely in either piece.
+
+Chat Models (BaseChatModel)
+  A unified interface over chat-style LLMs: `.invoke(messages_or_string)`,
+  `.stream(...)`, `.batch(...)`. Every provider integration (ChatOpenAI,
+  ChatAnthropic, ChatOllama, ...) exposes the same surface, so application
+  code that calls `.invoke()` doesn't care which provider is underneath.
+  Chat models also support "structured output" features — some providers
+  let you pass a JSON schema (or a Pydantic model, which LangChain will
+  convert to a JSON schema for you) and get back a response constrained to
+  match that schema.
+
+Output Parsers
+  Helpers that take a raw model response and coerce it into a structured
+  Python object — e.g. `PydanticOutputParser`, `StrOutputParser`,
+  `JsonOutputParser`. These are optional; you can always parse the raw
+  string yourself.
+
+Retrievers
+  A thin interface (`get_relevant_documents` / `invoke`) that wraps "given a
+  query, return relevant Documents." A VectorStore can be turned into a
+  Retriever via `.as_retriever()`. Other retriever types exist too
+  (BM25, multi-query, parent-document, ensemble, etc.) — the point is that
+  downstream code only needs to know "this thing returns Documents for a
+  query," not how it does so internally.
+
+Runnables & LCEL (LangChain Expression Language)
+  Almost everything in modern LangChain (prompts, models, parsers,
+  retrievers) implements a common `Runnable` interface with `.invoke()`,
+  `.batch()`, `.stream()`, `.ainvoke()`. The `|` operator composes Runnables
+  into a pipeline:
+
+      chain = prompt | llm | output_parser
+      result = chain.invoke({"question": "..."})
+
+  This is "LCEL" — it's essentially function composition with built-in
+  streaming, batching, retries, and async support layered on top for free.
+  You are not required to use LCEL; calling `.invoke()` directly on a chat
+  model with a plain string (as in a simple pipeline) is equally valid and
+  sometimes clearer when there's no multi-step chain to compose.
+
+Prompt Templates
+  `PromptTemplate` / `ChatPromptTemplate` let you define a prompt with
+  `{variable}` placeholders and `.format(...)` or `.invoke(...)` it with
+  real values, optionally combined with message roles (system/human/AI) for
+  chat models. This is a convenience layer — an f-string achieves the same
+  result for simple cases.
+
+Memory
+  Utilities for carrying conversation history across turns (buffer memory,
+  summary memory, etc.), mostly relevant to multi-turn chat applications
+  rather than single-shot pipelines.
+
+Agents / Tools
+  A pattern where the LLM is given a set of callable "tools" (Python
+  functions with a description) and, in a loop, decides which tool to call,
+  observes the result, and decides what to do next until it produces a
+  final answer. This is LangChain's mechanism for giving a model the
+  ability to take actions rather than just generate text.
+
+
+4. TYPICAL RAG (RETRIEVAL-AUGMENTED GENERATION) FLOW
+------------------------------------------------------
+This is the most common LangChain use case and worth spelling out end to
+end, since it's the shape almost every RAG codebase follows:
+
+  1. Load    — a document loader reads a source (PDF, website, database)
+               and produces a list of Document objects.
+  2. Split   — a text splitter breaks large Documents into smaller chunks
+               so each one is embeddable and fits in a retrieval window.
+  3. Embed   — an Embeddings implementation turns each chunk's text into a
+               vector.
+  4. Store   — a VectorStore indexes the (vector, Document) pairs for fast
+               similarity search.
+  5. Retrieve— at query time, the query itself is embedded and compared
+               against the stored vectors; the top-k most similar chunks
+               are returned as Documents.
+  6. Generate— the retrieved chunks are inserted into a prompt as context,
+               and a chat model is asked to answer the question using only
+               that context.
+  7. (Optional) Parse/validate — the model's raw text output is parsed into
+               a structured object and checked, often because you want
+               machine-readable output (citations, confidence scores) not
+               just prose.
+
+LangChain provides ready-made building blocks for steps 1-6. Step 7 is
+where a schema/validation library (like Pydantic) typically takes over,
+since LangChain's job stops at "get text out of the model" — enforcing that
+the text is well-formed structured data is a separate concern.
+
+
+5. WHY IT'S POPULAR (AND ITS TRADEOFFS)
+------------------------------------------
+Strengths:
+  - Provider abstraction: swapping models/vector stores/embedding
+    providers is often a one-line change.
+  - A large ecosystem of pre-built loaders, splitters, and integrations
+    means less boilerplate for common tasks (load a PDF, chunk a
+    website, connect to a vector DB).
+  - LCEL gives composed pipelines streaming/batching/retry behavior for
+    free.
+
+Common criticisms:
+  - The abstraction layers can obscure what's actually happening in a
+    simple case — sometimes a raw provider SDK call is more transparent
+    than three layers of Runnable wrapping.
+  - Version churn: the API surface has changed significantly across major
+    versions (community loaders spun out into langchain-community,
+    langchain-core split out, etc.), so tutorials/examples age quickly.
+  - Not everything needs the full framework — a single `.invoke()` call
+    on a chat model with a hand-built prompt string, no LCEL chain, no
+    memory, no agent — is a completely normal and common way to use it for
+    simpler pipelines.
