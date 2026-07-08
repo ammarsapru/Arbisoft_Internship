@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 OpenRouter model comparison and metrics report generator.
 
@@ -11,23 +11,25 @@ validated at runtime and the JSON output schema is always consistent.
 """
 
 from __future__ import annotations
-
+import json
 import argparse
 import os
+import re
+import subprocess
+import sys
 import time
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
-from typing import Iterable, List, Optional
+from typing import Callable, Dict, Iterable, List, Optional
 
 import requests
 from pydantic import BaseModel, Field, field_validator
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
-API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
-
+API_KEY = os.environ.get("OPENROUTER_API_KEY")
 if not API_KEY:
-    raise SystemExit("Set OPENROUTER_API_KEY environment variable before running.")
+    raise SystemExit("Set the OPENROUTER_API_KEY environment variable.")
 BASE_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 REQUEST_RETRIES = int(os.environ.get("OPENROUTER_RETRIES", "2"))
@@ -76,6 +78,7 @@ class EvalCategory(BaseModel):
     inspiration: str
     output_constraint: str
     prompts: List[str] = Field(..., min_length=10, max_length=10)
+    expected_answers: Optional[List[Optional[str]]] = None
 
     @field_validator("prompts")
     @classmethod
@@ -91,8 +94,10 @@ class EvalCategory(BaseModel):
                 category=self.id,
                 category_name=self.name,
                 prompt=f"{p}\n\n{self.output_constraint}",
+                prompt_index=i,
+                expected_answer=(self.expected_answers[i] if self.expected_answers else None),
             )
-            for p in self.prompts
+            for i, p in enumerate(self.prompts)
         ]
 
 
@@ -101,6 +106,8 @@ class BenchmarkPrompt(BaseModel):
     category: str
     category_name: str = ""
     prompt: str
+    prompt_index: int = 0
+    expected_answer: Optional[str] = None
 
 
 class ModelResult(BaseModel):
@@ -113,6 +120,8 @@ class ModelResult(BaseModel):
     completion_tokens: Optional[int] = None
     total_tokens: Optional[int] = None
     error: Optional[str] = None
+    ttft_seconds: Optional[float] = None
+    followed_constraint: Optional[bool] = None
 
     @property
     def succeeded(self) -> bool:
@@ -120,10 +129,11 @@ class ModelResult(BaseModel):
 
     @property
     def throughput(self) -> Optional[float]:
-        """Completion tokens per second — None when token count unavailable."""
-        if self.completion_tokens and self.elapsed_seconds > 0:
-            return self.completion_tokens / self.elapsed_seconds
-        return None
+        """Completion tokens per second of generation time — excludes TTFT."""
+        if not self.completion_tokens:
+            return None
+        gen_time = self.elapsed_seconds - (self.ttft_seconds or 0.0)
+        return self.completion_tokens / gen_time if gen_time > 0 else None
 
 
 class PromptComparison(BaseModel):
@@ -186,7 +196,8 @@ EVAL_CATEGORIES: List[EvalCategory] = [
         inspiration="GSM8K, MATH benchmark",
         output_constraint=(
             "Show step-by-step working. "
-            "Put the final answer on its own line as: ANSWER: [numeric value] [unit if applicable]"
+            "Put the final answer on its own line as: ANSWER: [numeric value] [unit if applicable] "
+            "Limit your entire response, including all working, to at most 120 words."
         ),
         prompts=[
             "Three people share $2,400 in ratio 3:5:4. How much does the largest share receive?",
@@ -221,6 +232,11 @@ EVAL_CATEGORIES: List[EvalCategory] = [
                 "one at 09:30 at 100 km/h. At what time do they meet?"
             ),
         ],
+        expected_answers=[
+            "$1000", "162", "$86.40", "18", "$12283",
+            "75", "20", "8", "6",
+            None,  # clock-time answer — format too ambiguous for reliable numeric matching
+        ],
     ),
     EvalCategory(
         id="logical_reasoning",
@@ -229,7 +245,8 @@ EVAL_CATEGORIES: List[EvalCategory] = [
         inspiration="BIG-Bench, LogiQA, Winogrande",
         output_constraint=(
             "Reason step by step. "
-            "Put the conclusion on its own line as: ANSWER: [your conclusion]"
+            "Put the conclusion on its own line as: ANSWER: [your conclusion] "
+            "Limit your entire response to at most 120 words."
         ),
         prompts=[
             (
@@ -282,7 +299,8 @@ EVAL_CATEGORIES: List[EvalCategory] = [
         output_constraint=(
             "Provide Python 3 code only — no prose before or after the code block. "
             "Include a one-line docstring. "
-            "End with exactly 2 assert statements that verify correct behaviour."
+            "End with exactly 2 assert statements that verify correct behaviour. "
+            "Keep the entire code block to at most 40 lines."
         ),
         prompts=[
             "Implement binary search on a sorted list of integers. Return the index or -1.",
@@ -414,6 +432,179 @@ EVAL_CATEGORIES: List[EvalCategory] = [
 ]
 
 
+# ── Constraint validators ─────────────────────────────────────────────────────
+# math_reasoning, code_generation and instruction_following get real correctness
+# checks (numeric answer match / actual execution / per-prompt mechanical rules).
+# logical_reasoning and factual_knowledge stay shape-only: verifying their
+# correctness reliably needs either hand-curated ground truth per puzzle (risk
+# of grading errors) or an LLM-judge (added cost/bias) — left as a follow-up.
+
+
+MATH_LOGIC_WORD_LIMIT = 120
+CODE_LINE_LIMIT = 40
+
+
+def _has_answer_line(text: str) -> bool:
+    return bool(re.search(r"(?m)^\s*ANSWER:\s*\S", text))
+
+
+def _is_2_to_3_sentences_no_bullets(text: str) -> bool:
+    if re.search(r"(?m)^\s*([-*•]|\d+[.)])\s", text):
+        return False
+    sentences = [s for s in re.split(r"(?<=[.!?])\s+", text.strip()) if s]
+    return 2 <= len(sentences) <= 3
+
+
+def _within_word_limit(text: str, limit: int) -> bool:
+    return _word_count(text) <= limit
+
+
+_NUMBER_RE = re.compile(r"-?\d+\.?\d*")
+
+
+def _first_number(text: str) -> Optional[float]:
+    match = _NUMBER_RE.search(text.replace(",", ""))
+    return float(match.group(0)) if match else None
+
+
+def _check_math_answer(text: str, expected: Optional[str]) -> bool:
+    """Requires an ANSWER: line within the word limit; if a reference answer
+    exists, the numeric value must also match within a tolerance (absorbs
+    rounding differences)."""
+    match = re.search(r"(?m)^\s*ANSWER:\s*(.+)$", text)
+    if not match or not _within_word_limit(text, MATH_LOGIC_WORD_LIMIT):
+        return False
+    if not expected:
+        return True
+    resp_num = _first_number(match.group(1))
+    exp_num = _first_number(expected)
+    if resp_num is None or exp_num is None:
+        return expected.strip().lower() in match.group(1).strip().lower()
+    return abs(resp_num - exp_num) <= max(1.0, abs(exp_num) * 0.02)
+
+
+def _extract_code_block(text: str) -> str:
+    match = re.search(r"```(?:python)?\s*\n(.*?)```", text, re.DOTALL)
+    return match.group(1) if match else text
+
+
+def _check_code_executes(text: str) -> bool:
+    """Actually runs the returned code (including its own asserts) in a
+    subprocess — checks the code is correct, not just that assert lines exist.
+    Caveat: this executes model-generated code locally; a short timeout is
+    enforced but there is no further sandboxing (no network/filesystem jail)."""
+    code = _extract_code_block(text)
+    try:
+        result = subprocess.run(
+            [sys.executable, "-c", code],
+            capture_output=True, text=True, timeout=5,
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
+
+
+def _check_code_length(text: str, limit: int) -> bool:
+    code = _extract_code_block(text)
+    return len(code.strip().splitlines()) <= limit
+
+
+def _word_count(text: str) -> int:
+    return len(text.split())
+
+
+def _sentences(text: str) -> List[str]:
+    return [s for s in re.split(r"(?<=[.!?])\s+", text.strip()) if s]
+
+
+def _if_0(text: str) -> bool:
+    """5 numbered items, each description exactly 8 words."""
+    descriptions = re.findall(r"(?m)^\s*\d+\.\s+\S.*?:\s*(.+)$", text)
+    return len(descriptions) == 5 and all(len(d.split()) == 8 for d in descriptions)
+
+
+def _if_1(text: str) -> bool:
+    """Exactly 3 sentences, must mention 'interface' and 'contract'."""
+    lower = text.lower()
+    return len(_sentences(text)) == 3 and "interface" in lower and "contract" in lower
+
+
+def _if_2(text: str) -> bool:
+    """TITLE:/LINE1:/LINE2:/LINE3: labels present (syllable counts not verified)."""
+    return all(label in text for label in ("TITLE:", "LINE1:", "LINE2:", "LINE3:"))
+
+
+def _if_3(text: str) -> bool:
+    """Exactly 2 sentences; first starts with SQL, second with NoSQL."""
+    sentences = _sentences(text)
+    return (
+        len(sentences) == 2
+        and sentences[0].strip().startswith("SQL")
+        and sentences[1].strip().startswith("NoSQL")
+    )
+
+
+def _if_4(text: str) -> bool:
+    """No more than 35 words, must include 'mirror'."""
+    return _word_count(text) <= 35 and "mirror" in text.lower()
+
+
+def _if_5(text: str) -> bool:
+    """FORMAL:/TECHNICAL:/CASUAL: labels each on their own line."""
+    return all(
+        re.search(rf"(?m)^{label}", text)
+        for label in ("FORMAL:", "TECHNICAL:", "CASUAL:")
+    )
+
+
+def _if_6(text: str) -> bool:
+    """Single integer, nothing else — and it must be the correct value (1024)."""
+    return text.strip() == "1024"
+
+
+def _if_7(text: str) -> bool:
+    """TIP 1:/TIP 2:/TIP 3: labels present (action-verb start not verified)."""
+    return all(f"TIP {n}:" in text for n in (1, 2, 3))
+
+
+def _if_8(text: str) -> bool:
+    """PLAIN:/PSEUDOCODE: labels present."""
+    return "PLAIN:" in text and "PSEUDOCODE:" in text
+
+
+def _if_9(text: str) -> bool:
+    """Exact table header plus at least 4 data rows, no other text."""
+    has_header = bool(
+        re.search(r"Algorithm\s*\|\s*Average Time Complexity\s*\|\s*Stable\?", text)
+    )
+    rows = [l for l in text.splitlines() if "|" in l]
+    return has_header and len(rows) >= 5
+
+
+INSTRUCTION_FOLLOWING_VALIDATORS: Dict[int, Callable[[str], bool]] = {
+    0: _if_0, 1: _if_1, 2: _if_2, 3: _if_3, 4: _if_4,
+    5: _if_5, 6: _if_6, 7: _if_7, 8: _if_8, 9: _if_9,
+}
+
+
+def _check_instruction_following(prompt_index: int, text: str) -> Optional[bool]:
+    validator = INSTRUCTION_FOLLOWING_VALIDATORS.get(prompt_index)
+    return validator(text) if validator else None
+
+
+CONSTRAINT_VALIDATORS: Dict[str, Callable[[BenchmarkPrompt, str], Optional[bool]]] = {
+    "math_reasoning": lambda item, text: _check_math_answer(text, item.expected_answer),
+    "logical_reasoning": lambda item, text: (
+        _has_answer_line(text) and _within_word_limit(text, MATH_LOGIC_WORD_LIMIT)
+    ),
+    "code_generation": lambda item, text: (
+        _check_code_executes(text) and _check_code_length(text, CODE_LINE_LIMIT)
+    ),
+    "factual_knowledge": lambda item, text: _is_2_to_3_sentences_no_bullets(text),
+    "instruction_following": lambda item, text: _check_instruction_following(item.prompt_index, text),
+}
+
+
 # ── API helpers ───────────────────────────────────────────────────────────────
 
 
@@ -454,32 +645,67 @@ def call_model(model: ModelConfig, prompt: str) -> ModelResult:
         ],
         "max_tokens": FAIRNESS_CONFIG.max_tokens,
         "temperature": FAIRNESS_CONFIG.temperature,
+        "stream": True,
+        "usage": {"include": True},
     }
     start = time.time()
+    ttft = None
     try:
         response = None
         for attempt in range(REQUEST_RETRIES + 1):
-            response = requests.post(BASE_URL, headers=headers, json=payload, timeout=90)
+            response = requests.post(BASE_URL, headers=headers, json=payload, timeout=90, stream=True)
             if response.status_code != 429 or attempt == REQUEST_RETRIES:
                 break
             wait = retry_wait_seconds(response, attempt)
             print(f"  {model.name}: 429 rate limit; retrying in {wait:.1f}s")
             time.sleep(wait)
 
-        elapsed = time.time() - start
         response.raise_for_status()
-        data = response.json()
-        choices = data.get("choices") or []
-        message = (choices[0].get("message", {}) if choices else {})
-        content = message.get("content")
+
+        parts = []
+        first_token_at = None
+        usage = {}
+
+        for line in response.iter_lines(decode_unicode=True):
+            if not line or not line.startswith("data: "):
+                continue
+
+            raw_json_text = line[len("data: "):]
+            if raw_json_text == "[DONE]":
+                break
+
+            chunk = json.loads(raw_json_text)
+
+            if "error" in chunk:
+                err = chunk["error"]
+                msg = err.get("message", str(err)) if isinstance(err, dict) else str(err)
+                raise ValueError(f"API error in response body: {msg}")
+
+            if chunk.get("usage"):
+                usage = chunk["usage"]
+
+            choices = chunk.get("choices") or []
+            delta = choices[0]["delta"] if choices else {}
+            piece = delta.get("content")
+
+            if piece:
+                if first_token_at is None:
+                    first_token_at = time.time()
+                parts.append(piece)
+
+        elapsed = time.time() - start
+        content = "".join(parts)
+        ttft = (first_token_at - start) if first_token_at else None
+
         if not content:
             raise ValueError("Empty response content")
-        usage = data.get("usage", {})
+
         return ModelResult(
             model=model.name,
             model_id=model.id,
             response=content,
             elapsed_seconds=round(elapsed, 3),
+            ttft_seconds=round(ttft, 3) if ttft is not None else None,
             prompt_tokens=usage.get("prompt_tokens"),
             completion_tokens=usage.get("completion_tokens"),
             total_tokens=usage.get("total_tokens"),
@@ -489,6 +715,7 @@ def call_model(model: ModelConfig, prompt: str) -> ModelResult:
             model=model.name,
             model_id=model.id,
             elapsed_seconds=round(time.time() - start, 3),
+            ttft_seconds=round(ttft, 3) if ttft is not None else None,
             error=str(exc),
         )
 
@@ -497,31 +724,54 @@ def call_model(model: ModelConfig, prompt: str) -> ModelResult:
 
 
 def run_benchmark(prompts: List[BenchmarkPrompt]) -> List[PromptComparison]:
-    """Run every prompt against every model sequentially and return typed results."""
+    """
+    Run every prompt against every model sequentially and return typed results.
+
+    Stops early (returning whatever was collected so far) if either:
+      - all models fail on the same prompt (free-tier rate limiting has become
+        the dominant outcome, so continuing just burns the remaining quota), or
+      - the user hits Ctrl+C.
+    Either way, main() still saves the partial JSON/report from what's returned.
+    """
     comparisons: List[PromptComparison] = []
     total = len(prompts)
-    for i, item in enumerate(prompts, 1):
-        print(f"\n[{i}/{total}] {item.category_name or item.category}")
-        print(f"  {item.prompt.splitlines()[0][:110]}")
-        results: List[ModelResult] = []
-        for model in MODELS:
-            result = call_model(model, item.prompt)
-            tok = result.completion_tokens or "n/a"
-            tps = f"{result.throughput:.1f} tok/s" if result.throughput else ""
-            status = "OK" if result.succeeded else "ERROR"
-            print(f"  {model.name}: {status} {result.elapsed_seconds:.2f}s "
-                  f"tokens={tok} {tps}")
-            if result.error:
-                print(f"    {result.error[:180]}")
-            results.append(result)
-            if CALL_DELAY_SECONDS:
-                time.sleep(CALL_DELAY_SECONDS)
-        comparisons.append(PromptComparison(
-            category=item.category,
-            category_name=item.category_name,
-            prompt=item.prompt,
-            results=results,
-        ))
+    try:
+        for i, item in enumerate(prompts, 1):
+            print(f"\n[{i}/{total}] {item.category_name or item.category}")
+            print(f"  {item.prompt.splitlines()[0][:110]}")
+            results: List[ModelResult] = []
+            for model in MODELS:
+                result = call_model(model, item.prompt)
+                validator = CONSTRAINT_VALIDATORS.get(item.category)
+                if result.succeeded and validator:
+                    result.followed_constraint = validator(item, result.response)
+                tok = result.completion_tokens or "n/a"
+                tps = f"{result.throughput:.1f} tok/s" if result.throughput else ""
+                status = "OK" if result.succeeded else "ERROR"
+                print(f"  {model.name}: {status} {result.elapsed_seconds:.2f}s "
+                      f"tokens={tok} {tps}")
+                if result.error:
+                    print(f"    {result.error[:180]}")
+                results.append(result)
+                if CALL_DELAY_SECONDS:
+                    time.sleep(CALL_DELAY_SECONDS)
+            comparisons.append(PromptComparison(
+                category=item.category,
+                category_name=item.category_name,
+                prompt=item.prompt,
+                results=results,
+            ))
+            if all(not r.succeeded for r in results):
+                print(
+                    f"\n  All {len(MODELS)} models failed on this prompt — stopping early "
+                    f"and saving partial results ({i}/{total} prompts completed)."
+                )
+                break
+    except KeyboardInterrupt:
+        print(
+            f"\nInterrupted — saving partial results "
+            f"({len(comparisons)}/{total} prompts completed)."
+        )
     return comparisons
 
 
@@ -563,12 +813,14 @@ def save_metrics_report(
     """Write a Markdown metrics report with per-model and per-category tables."""
     # Aggregate stats using ModelResult's typed properties
     stats = {
-        m.name: {"times": [], "tokens": [], "errors": 0, "calls": 0}
+        m.name: {"times": [], "ttfts": [], "tokens": [], "errors": 0,
+                  "constraint_ok": 0, "constraint_checked": 0, "calls": 0}
         for m in MODELS
     }
     by_category = {
         cat.id: {
-            m.name: {"times": [], "tokens": [], "errors": 0, "calls": 0}
+            m.name: {"times": [], "tokens": [], "errors": 0, "calls": 0,
+                      "constraint_ok": 0, "constraint_checked": 0}
             for m in MODELS
         }
         for cat in EVAL_CATEGORIES
@@ -588,12 +840,20 @@ def save_metrics_report(
                 errors.append((n, comp.category, name, result.error or "unknown"))
                 continue
             stats[name]["times"].append(result.elapsed_seconds)
+            if result.ttft_seconds is not None:
+                stats[name]["ttfts"].append(result.ttft_seconds)
+            if result.followed_constraint is not None:
+                stats[name]["constraint_checked"] += 1
+                stats[name]["constraint_ok"] += int(result.followed_constraint)
             if result.completion_tokens:
                 stats[name]["tokens"].append(result.completion_tokens)
             if comp.category in by_category:
                 by_category[comp.category][name]["times"].append(result.elapsed_seconds)
                 if result.completion_tokens:
                     by_category[comp.category][name]["tokens"].append(result.completion_tokens)
+                if result.followed_constraint is not None:
+                    by_category[comp.category][name]["constraint_checked"] += 1
+                    by_category[comp.category][name]["constraint_ok"] += int(result.followed_constraint)
 
     lines = [
         "# Metrics Report",
@@ -637,25 +897,36 @@ def save_metrics_report(
         "",
         "## Overall Model Metrics",
         "",
-        "| Model | OK / Calls | Errors | Avg Latency (s) | Avg Tokens | Throughput (tok/s) |",
-        "|---|---:|---:|---:|---:|---:|",
+        "| Model | OK / Calls | Errors | Avg Latency (s) | Avg TTFT (s) | Avg Tokens | Gen Throughput (tok/s) | Constraint OK |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|",
     ])
 
     for m in MODELS:
         s = stats[m.name]
         avg_lat = _avg(s["times"])
+        avg_ttft = _avg(s["ttfts"])
         avg_tok = _avg(s["tokens"])
+        gen_times = (
+            [t - f for t, f in zip(s["times"], s["ttfts"])]
+            if len(s["ttfts"]) == len(s["times"]) else s["times"]
+        )
         tput = (
-            sum(s["tokens"]) / sum(s["times"])
-            if s["tokens"] and s["times"] else None
+            sum(s["tokens"]) / sum(gen_times)
+            if s["tokens"] and sum(gen_times) > 0 else None
+        )
+        compliance = (
+            f"{s['constraint_ok']}/{s['constraint_checked']}"
+            if s["constraint_checked"] else "n/a"
         )
         lines.append(
             f"| {m.name} "
             f"| {len(s['times'])} / {s['calls']} "
             f"| {s['errors']} "
             f"| {_fmt(avg_lat)} "
+            f"| {_fmt(avg_ttft)} "
             f"| {_fmt(avg_tok, 1)} "
-            f"| {_fmt(tput, 1)} |"
+            f"| {_fmt(tput, 1)} "
+            f"| {compliance} |"
         )
 
     lines.extend([
@@ -696,6 +967,27 @@ def save_metrics_report(
             row.append(_fmt(tput, 1) if tput else "n/a")
         lines.append("| " + " | ".join(row) + " |")
 
+    lines.extend([
+        "",
+        "## Constraint / Correctness Compliance by Category",
+        "",
+        "(math_reasoning/code_generation/instruction_following = real correctness checks; "
+        "logical_reasoning/factual_knowledge = format shape only — see code comments)",
+        "",
+        f"| Category | {' | '.join(m.name for m in MODELS)} |",
+        f"|---{'|---:' * len(MODELS)}|",
+    ])
+    for cat in EVAL_CATEGORIES:
+        row = [cat.name]
+        for m in MODELS:
+            s = by_category[cat.id][m.name]
+            cell = (
+                f"{s['constraint_ok']}/{s['constraint_checked']}"
+                if s["constraint_checked"] else "n/a"
+            )
+            row.append(cell)
+        lines.append("| " + " | ".join(row) + " |")
+
     if errors:
         lines.extend([
             "",
@@ -734,13 +1026,24 @@ def parse_args() -> argparse.Namespace:
 
 
 def select_prompts(args: argparse.Namespace) -> List[BenchmarkPrompt]:
-    prompts = [
-        p
-        for cat in EVAL_CATEGORIES
-        for p in cat.to_benchmark_prompts()
-    ]
+    categories = EVAL_CATEGORIES
     if args.category:
-        prompts = [p for p in prompts if p.category == args.category]
+        categories = [c for c in categories if c.id == args.category]
+
+    per_category = [c.to_benchmark_prompts() for c in categories]
+
+    if args.limit and len(per_category) > 1:
+        # Distribute the limit evenly across categories (round-robin), instead
+        # of slicing the flattened list — a flat slice would only ever sample
+        # from the first category or two since prompts are grouped by category.
+        base, remainder = divmod(args.limit, len(per_category))
+        selected: List[BenchmarkPrompt] = []
+        for idx, cat_prompts in enumerate(per_category):
+            take = base + (1 if idx < remainder else 0)
+            selected.extend(cat_prompts[:take])
+        return selected
+
+    prompts = [p for cat_prompts in per_category for p in cat_prompts]
     if args.limit:
         prompts = prompts[: args.limit]
     return prompts

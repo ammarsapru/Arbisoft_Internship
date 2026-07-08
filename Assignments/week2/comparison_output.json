@@ -1,0 +1,171 @@
+{
+  "generated_at": "2026-07-08T05:31:28",
+  "fairness_config": {
+    "max_tokens": 600,
+    "temperature": 0.0,
+    "system": "You are a precise, helpful assistant. Follow all output format instructions exactly. Do not add preamble or filler."
+  },
+  "model_ids": [
+    "openai/gpt-oss-120b:free",
+    "google/gemma-4-31b-it:free",
+    "nvidia/nemotron-nano-9b-v2:free"
+  ],
+  "categories": [
+    {
+      "id": "math_reasoning",
+      "name": "Mathematical Reasoning",
+      "what_it_tests": "Multi-step arithmetic, algebra, geometry, combinatorics",
+      "inspiration": "GSM8K, MATH benchmark",
+      "output_constraint": "Show step-by-step working. Put the final answer on its own line as: ANSWER: [numeric value] [unit if applicable] Limit your entire response, including all working, to at most 120 words.",
+      "prompts": [
+        "Three people share $2,400 in ratio 3:5:4. How much does the largest share receive?",
+        "A rectangle has perimeter 54 cm. Its length is twice its width. What is its area?",
+        "A shop buys a jacket for $80, marks it up 35%, then discounts the marked price by 20%. What is the final sale price?",
+        "Pipe A fills a tank in 6 hours. Pipe B drains it in 9 hours. Both open on an empty tank. How long to fill it completely?",
+        "A $20,000 car depreciates by 15% of current value each year. What is its value after 3 years, rounded to the nearest dollar?",
+        "How many three-digit integers are divisible by both 4 and 6?",
+        "Mix 12% and 4% saline solutions to make 40 litres of 8% saline. How many litres of the 12% solution are used?",
+        "In a class of 30 students, 18 play football, 14 play cricket, and 6 play neither. How many play both?",
+        "A ladder makes a 60-degree angle with the ground and its foot is 3 m from the wall. How long is the ladder?",
+        "Two trains start 300 km apart: one at 09:00 at 80 km/h, one at 09:30 at 100 km/h. At what time do they meet?"
+      ],
+      "expected_answers": [
+        "$1000",
+        "162",
+        "$86.40",
+        "18",
+        "$12283",
+        "75",
+        "20",
+        "8",
+        "6",
+        null
+      ]
+    },
+    {
+      "id": "logical_reasoning",
+      "name": "Logical & Deductive Reasoning",
+      "what_it_tests": "Syllogisms, conditionals, puzzles, sequence patterns, set logic",
+      "inspiration": "BIG-Bench, LogiQA, Winogrande",
+      "output_constraint": "Reason step by step. Put the conclusion on its own line as: ANSWER: [your conclusion] Limit your entire response to at most 120 words.",
+      "prompts": [
+        "All mammals are warm-blooded. Dolphins are mammals. Warm-blooded animals have four-chambered hearts. Snakes are not warm-blooded. Can we conclude snakes do not have four-chambered hearts? Explain.",
+        "On an island, Knights always tell truth and Knaves always lie. A says: 'We are both Knaves.' What are A and B?",
+        "Find the next number and the rule: 2, 6, 12, 20, 30, 42, ?",
+        "If it is raining, Alex carries an umbrella. Alex is not carrying one. What follows? Name the logical form used.",
+        "Solve the wolf, goat, cabbage river crossing: the boat holds the farmer and one item; the wolf eats the goat and the goat eats the cabbage if left alone.",
+        "Tom is older than Sam. Sam is older than Jake. Jake is older than Priya. Is Tom necessarily oldest? Who is definitely youngest?",
+        "All squares are rectangles. Some rectangles are rhombuses. No rhombuses are circles. Which must be true? A) All squares are rhombuses. B) A square can be a rhombus. C) No squares are circles.",
+        "Everyone who owns a cat owns a dog. Some dog owners are vegetarian. Mia owns a cat. Can we conclude Mia is vegetarian?",
+        "Three switches outside a room each control one of three bulbs inside. You may enter the room only once. How do you identify each switch?",
+        "Five cards — red, blue, green, yellow, white — are in a row. Green is immediately left of white; red is position 3; blue is left of red; yellow is not at either end. What is the order?"
+      ],
+      "expected_answers": null
+    },
+    {
+      "id": "code_generation",
+      "name": "Code Generation & Algorithmic Problem Solving",
+      "what_it_tests": "Algorithm implementation, correctness, edge-case handling, code clarity",
+      "inspiration": "HumanEval, MBPP, LeetCode-style benchmarks",
+      "output_constraint": "Provide Python 3 code only — no prose before or after the code block. Include a one-line docstring. End with exactly 2 assert statements that verify correct behaviour. Keep the entire code block to at most 40 lines.",
+      "prompts": [
+        "Implement binary search on a sorted list of integers. Return the index or -1.",
+        "Write a function that checks whether a string is a palindrome, ignoring case and non-alphanumeric characters.",
+        "Implement merge sort on a list of integers and return the sorted list.",
+        "Return all unique value pairs from a list of integers that add up to a target sum.",
+        "Detect whether a directed graph (given as an adjacency-list dict) contains a cycle.",
+        "Return the nth Fibonacci number using dynamic programming, not recursion.",
+        "Determine whether brackets (), {}, [] in a string are balanced.",
+        "Merge overlapping intervals given as [start, end] pairs; return sorted result.",
+        "Convert an integer from 1 to 3999 to its Roman numeral representation.",
+        "Find the length of the longest consecutive integer sequence in an unsorted list. Example: [100, 4, 200, 1, 3, 2] -> 4 (sequence 1,2,3,4)."
+      ],
+      "expected_answers": null
+    },
+    {
+      "id": "factual_knowledge",
+      "name": "Factual & Technical Knowledge",
+      "what_it_tests": "Computer science fundamentals — tests precision and conciseness of recall, not essay-writing ability",
+      "inspiration": "MMLU (CS track), TriviaQA",
+      "output_constraint": "Answer in exactly 2 to 3 sentences. Do not use bullet points or numbered lists.",
+      "prompts": [
+        "What are the four ACID properties of a database transaction, and why does each matter?",
+        "What is the difference between a process and a thread in an operating system?",
+        "State the CAP theorem. Can a distributed system satisfy all three properties at once?",
+        "What does Big-O notation measure? What are quicksort's average-case and worst-case time complexities?",
+        "What is the difference between symmetric and asymmetric encryption? Give one real-world example of each.",
+        "What is a foreign key in a relational database, and what constraint does it enforce?",
+        "What is virtual memory in an operating system, and what problem does it solve?",
+        "What is a deadlock in an operating system? Name one necessary condition for it.",
+        "What is the difference between compiled and interpreted programming languages? Give one example of each.",
+        "What does the OSI model describe, how many layers does it have, and which layer is responsible for end-to-end communication between applications?"
+      ],
+      "expected_answers": null
+    },
+    {
+      "id": "instruction_following",
+      "name": "Instruction Following & Constraint Adherence",
+      "what_it_tests": "Precise format compliance, constraint counting, and label adherence — tests whether models follow multi-part rules without drifting",
+      "inspiration": "IFEval (Google), FollowBench",
+      "output_constraint": "Follow every constraint in the prompt exactly. Deviation from any stated rule counts as a failure.",
+      "prompts": [
+        "List exactly 5 Python built-in functions. Number them 1 to 5. Each description must be exactly 8 words. Format: [number]. [function name]: [8-word description]",
+        "Explain what an API is. Constraints: (a) exactly 3 sentences, (b) must include the word 'interface', (c) must include the word 'contract'.",
+        "Write a haiku about databases. Output only: TITLE: [title] LINE1: [5 syllables] LINE2: [7 syllables] LINE3: [5 syllables]",
+        "Compare SQL and NoSQL in exactly 2 sentences. Sentence 1 must begin with 'SQL'. Sentence 2 must begin with 'NoSQL'. Write nothing else.",
+        "Explain recursion using a metaphor. Hard constraints: (1) no more than 35 words total, (2) the metaphor must include the word 'mirror'.",
+        "Rewrite 'The server crashed' in three registers. Use exactly these labels on separate lines: FORMAL: / TECHNICAL: / CASUAL:",
+        "Answer with a single integer and nothing else: How many bytes are in one kibibyte (KiB)?",
+        "Give 3 tips for writing clean code. Each tip must start with an action verb. Format: TIP 1: [verb ...] TIP 2: [verb ...] TIP 3: [verb ...]",
+        "Translate this into plain English then Python pseudocode: 'For each element in the collection, if the element satisfies the predicate, append it to the output sequence.' Use labels: PLAIN: [text] PSEUDOCODE: [code]",
+        "Name 4 sorting algorithms as a table. Exact headers: Algorithm | Average Time Complexity | Stable? No other text before or after the table."
+      ],
+      "expected_answers": null
+    }
+  ],
+  "comparisons": [
+    {
+      "category": "math_reasoning",
+      "category_name": "Mathematical Reasoning",
+      "prompt": "Three people share $2,400 in ratio 3:5:4. How much does the largest share receive?\n\nShow step-by-step working. Put the final answer on its own line as: ANSWER: [numeric value] [unit if applicable] Limit your entire response, including all working, to at most 120 words.",
+      "results": [
+        {
+          "model": "GPT-OSS 120B",
+          "model_id": "openai/gpt-oss-120b:free",
+          "response": null,
+          "elapsed_seconds": 52.731,
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "total_tokens": null,
+          "error": "429 Client Error: Too Many Requests for url: https://openrouter.ai/api/v1/chat/completions",
+          "ttft_seconds": null,
+          "followed_constraint": null
+        },
+        {
+          "model": "Gemma 4 31B-IT",
+          "model_id": "google/gemma-4-31b-it:free",
+          "response": null,
+          "elapsed_seconds": 50.537,
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "total_tokens": null,
+          "error": "429 Client Error: Too Many Requests for url: https://openrouter.ai/api/v1/chat/completions",
+          "ttft_seconds": null,
+          "followed_constraint": null
+        },
+        {
+          "model": "Nemotron Nano 9B",
+          "model_id": "nvidia/nemotron-nano-9b-v2:free",
+          "response": null,
+          "elapsed_seconds": 5.646,
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "total_tokens": null,
+          "error": "Empty response content",
+          "ttft_seconds": null,
+          "followed_constraint": null
+        }
+      ]
+    }
+  ]
+}
