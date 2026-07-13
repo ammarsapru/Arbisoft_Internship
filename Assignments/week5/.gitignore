@@ -1,0 +1,17 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+traces/*.jsonl
+reports/*.xlsx
+# Raw console captures from live testing embed full SerpApi request URLs,
+# including the real API key, via httpx's INFO-level request logging
+# (wrapped across multiple lines by Rich's console formatting, but
+# trivially reconstructable) - confirmed present in every *_raw.txt file
+# and excluded here rather than surgically redacted, since a fragile
+# partial redaction is worse than just not committing these dev logs.
+# reports/TEST_RUN_REPORT.md (the actual curated deliverable) is unaffected.
+reports/*_raw.txt
+.pytest_cache/
+*.egg-info/
+.claude/settings.local.json

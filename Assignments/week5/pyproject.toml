@@ -1,0 +1,36 @@
+[project]
+name = "financial-analyst-mcp"
+version = "0.1.0"
+description = "MCP server + LangGraph supervisor/worker agents for financial analysis reports"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp>=1.6.0",
+    "langgraph>=0.2.60",
+    "langchain-mcp-adapters>=0.1.0",
+    "langchain-anthropic>=0.3.0",
+    "langchain-core>=0.3.0",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.4",
+    "httpx>=0.27",
+    "xlsxwriter>=3.2",
+    "python-dotenv>=1.0",
+    "rich>=13.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["fin_analyst*"]

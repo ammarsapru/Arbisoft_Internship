@@ -1,0 +1,27 @@
+=== resolve_ticker('Apple') ===
+outcome='resolved' ticker='AAPL' exchange='NASDAQ' display_name='Apple Inc' confidence='high' resolved_via='web_search'
+
+=== resolve_ticker('SpaceX') ===
+outcome='resolved' ticker='SPCX' exchange='NASDAQ' display_name='Space Exploration Technologies Corp' confidence='low' resolved_via='web_search'
+
+=== resolve_ticker('asdkjaslkdjalskdj notacompany') ===
+outcome='not_listed' query='asdkjaslkdjalskdj notacompany' reason="No stock ticker found in Google's knowledge panel for this company - it is most likely not publicly traded."
+
+=== get_market_snapshot() ===
+['us', 'europe', 'asia', 'latin_america', 'currencies', 'crypto', 'futures']
+code='.IXIC:INDEXNASDAQ' name='Nasdaq' price=25870.652 price_movement=PriceMovement(percentage=0.20126076, value=51.96289, direction='Up')
+
+=== get_stock_financials(AAPL, NASDAQ, 5Y) ===
+summary: title='Apple Inc' ticker='AAPL' exchange='NASDAQ' currency='USD' price=313.39 price_movement=PriceMovement(percentage=115.967197299, value=168.28, direction='Up') as_of='Jul 08 2026, 08:30:00 PM UTC-04:00' after_hours_price=313.13 after_hours_movement=PriceMovement(percentage=0.082966834, value=-0.26000977, direction='Down')
+num price points: 262
+technicals: period_return_pct=115.96719729860104 volatility_pct=3.7732508462237706 max_drawdown_pct=-27.7681805516857 sma_20=281.1545 ema_20=287.2446387476149
+num key stats: 16 [KeyStat(label='Open', raw_value='$311.91', parsed_value=311.91), KeyStat(label='High', raw_value='$314.82', parsed_value=314.82), KeyStat(label='Low', raw_value='$307.05', parsed_value=307.05)]
+num statements: 3
+net_margin_pct: 26.60274859692042
+relative_performance: benchmark_name='Nasdaq' benchmark_period_return_pct=0.20126076 stock_period_return_pct=115.96719729860104 outperformance_pct=115.76593653860104
+
+=== get_company_news(AAPL, Apple Inc) ===
+num articles: 15
+ - 2026-07-03 17:47:40+00:00 Yahoo Finance Jim Cramer’s Latest Thought on Apple Inc. (AAPL)
+ - 2026-07-04 13:30:40+00:00 GuruFocus Apple Inc. (AAPL) Stock Surges as Company Plans New Foldable iPh
+ - 2026-07-08 08:33:36+00:00 Seeking Alpha Apple fails to shield App Store and iOS from sweeping EU antitrust crackdown (AAPL:NASDAQ)
