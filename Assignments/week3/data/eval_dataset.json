@@ -1,0 +1,103 @@
+{
+  "description": "Retrieval evaluation dataset for the NIKE FY2023 10-K (nke-10k-2023.pdf). Each question has ground-truth page numbers (0-indexed, matching the 'page' metadata set in extract_pdf.py) that were manually verified against the extracted PDF text. A retrieved chunk counts as relevant if its source page is in expected_pages.",
+  "questions": [
+    {
+      "id": "q01",
+      "question": "What were NIKE's total revenues in fiscal 2023 and how much did they grow?",
+      "expected_pages": [30, 35],
+      "reference_answer": "Record revenues of $51.2 billion, up 10% on a reported basis and 16% on a currency-neutral basis.",
+      "answer_keywords": ["51.2 billion", "10%", "16%"]
+    },
+    {
+      "id": "q02",
+      "question": "How much revenue did NIKE Direct generate in fiscal 2023?",
+      "expected_pages": [30, 34, 35],
+      "reference_answer": "NIKE Direct revenues grew 14% from $18.7 billion in fiscal 2022 to $21.3 billion in fiscal 2023.",
+      "answer_keywords": ["21.3 billion", "14%"]
+    },
+    {
+      "id": "q03",
+      "question": "What was NIKE's gross margin in fiscal 2023 and why did it change?",
+      "expected_pages": [30, 33, 36],
+      "reference_answer": "Gross margin decreased 250 basis points to 43.5%, driven primarily by higher product costs, higher markdowns and unfavorable foreign currency changes.",
+      "answer_keywords": ["43.5", "250 basis points"]
+    },
+    {
+      "id": "q04",
+      "question": "Approximately how many employees did NIKE have as of May 31, 2023?",
+      "expected_pages": [8],
+      "reference_answer": "Approximately 83,700 employees worldwide, including retail and part-time employees.",
+      "answer_keywords": ["83,700"]
+    },
+    {
+      "id": "q05",
+      "question": "Where is Converse headquartered and what trademarks does it sell under?",
+      "expected_pages": [3],
+      "reference_answer": "Converse is headquartered in Boston, Massachusetts and sells under the Converse, Chuck Taylor, All Star, One Star, Star Chevron and Jack Purcell trademarks.",
+      "answer_keywords": ["Boston", "Chuck Taylor"]
+    },
+    {
+      "id": "q06",
+      "question": "Describe NIKE's world headquarters campus.",
+      "expected_pages": [26],
+      "reference_answer": "The NIKE World Campus near Beaverton, Oregon is an approximately 400-acre site with over 40 buildings occupied by approximately 11,400 employees.",
+      "answer_keywords": ["400-acre", "Beaverton", "11,400"]
+    },
+    {
+      "id": "q07",
+      "question": "How many significant distribution centers does NIKE have in the United States and where are they located?",
+      "expected_pages": [4, 26],
+      "reference_answer": "Eight significant distribution centers in the United States; five are in or near Memphis, Tennessee, plus Indianapolis, Indiana and Dayton, Tennessee.",
+      "answer_keywords": ["eight", "Memphis"]
+    },
+    {
+      "id": "q08",
+      "question": "What was NIKE's effective tax rate in fiscal 2023 and why did it change?",
+      "expected_pages": [37],
+      "reference_answer": "The effective tax rate was 18.2% for fiscal 2023 compared to 9.1% for fiscal 2022, primarily due to decreased benefits from stock-based compensation.",
+      "answer_keywords": ["18.2%", "9.1%"]
+    },
+    {
+      "id": "q09",
+      "question": "How much were Converse revenues in fiscal 2023?",
+      "expected_pages": [34],
+      "reference_answer": "Converse revenues were $2,427 million in fiscal 2023, up 3% on a reported basis.",
+      "answer_keywords": ["2,427"]
+    },
+    {
+      "id": "q10",
+      "question": "What share repurchase program did NIKE begin purchasing under in fiscal 2023?",
+      "expected_pages": [27, 47],
+      "reference_answer": "A new four-year, $18 billion share repurchase program authorized by the Board of Directors in June 2022.",
+      "answer_keywords": ["18 billion", "four-year"]
+    },
+    {
+      "id": "q11",
+      "question": "How did foreign currency exchange rates affect NIKE's reported revenues in fiscal 2023?",
+      "expected_pages": [31],
+      "reference_answer": "Fluctuations in foreign currency exchange rates negatively impacted reported revenues by approximately $2,859 million.",
+      "answer_keywords": ["2,859"]
+    },
+    {
+      "id": "q12",
+      "question": "What is demand creation expense and how much was it in fiscal 2023?",
+      "expected_pages": [33, 36, 57, 64],
+      "reference_answer": "Demand creation expense consists of advertising and promotion costs including endorsement contracts; it was $4,060 million in fiscal 2023, up 5%.",
+      "answer_keywords": ["4,060", "advertising"]
+    },
+    {
+      "id": "q13",
+      "question": "What was NIKE's net income in fiscal 2023?",
+      "expected_pages": [31, 32, 58, 60],
+      "reference_answer": "Net income was $5,070 million in fiscal 2023, compared to $6,046 million in fiscal 2022.",
+      "answer_keywords": ["5,070"]
+    },
+    {
+      "id": "q14",
+      "question": "Who is NIKE's independent registered public accounting firm?",
+      "expected_pages": [54, 56],
+      "reference_answer": "PricewaterhouseCoopers LLP.",
+      "answer_keywords": ["PricewaterhouseCoopers"]
+    }
+  ]
+}

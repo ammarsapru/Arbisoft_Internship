@@ -1,0 +1,142 @@
+================================================================================
+  MODEL COMPARISON METRICS REPORT
+  Generated: 2026-07-03 01:34:53
+================================================================================
+
+  Fairness constraints applied to every API call:
+    max_tokens  = 600  (caps verbosity bias — longer != better)
+    temperature = 0  (deterministic, reproducible outputs)
+    system msg  = identical for all models  (removes prompt-sensitivity variance)
+
+  Coverage: 1 prompt × 5 categories × 3 models = 15 API calls
+
+--------------------------------------------------------------------------------
+  SECTION 1 — PER-PROMPT RAW METRICS
+--------------------------------------------------------------------------------
+
++----------------------------+--------------------+------------+---------+-----------+----------------+---------+
+| Category                   | Model              | Latency (… |  Tokens |     Tok/s | Resp len (cha… | Status  |
++----------------------------+--------------------+------------+---------+-----------+----------------+---------+
+| Mathematical Reasoning     | GPT-OSS 120B       |      50.59 |     N/A |       N/A |              0 | ERR     |
+|                            | Gemma 4 31B-IT     |      50.30 |     N/A |       N/A |              0 | ERR     |
+|                            | Nemotron Nano 9B   |      29.49 |     444 |      15.1 |            156 | OK      |
++----------------------------+--------------------+------------+---------+-----------+----------------+---------+
+| Logical & Deductive Reason | GPT-OSS 120B       |      51.66 |     N/A |       N/A |              0 | ERR     |
+|                            | Gemma 4 31B-IT     |      57.92 |     186 |       3.2 |            731 | OK      |
+|                            | Nemotron Nano 9B   |      11.21 |     467 |      41.7 |            336 | OK      |
++----------------------------+--------------------+------------+---------+-----------+----------------+---------+
+| Code Generation & Algorith | GPT-OSS 120B       |      61.62 |     198 |       3.2 |            454 | OK      |
+|                            | Gemma 4 31B-IT     |      50.37 |     N/A |       N/A |              0 | ERR     |
+|                            | Nemotron Nano 9B   |      29.86 |     600 |      20.1 |            156 | OK      |
++----------------------------+--------------------+------------+---------+-----------+----------------+---------+
+| Factual & Technical Knowle | GPT-OSS 120B       |       5.73 |     146 |      25.5 |            711 | OK      |
+|                            | Gemma 4 31B-IT     |       3.68 |      72 |      19.6 |            433 | OK      |
+|                            | Nemotron Nano 9B   |       8.59 |     351 |      40.9 |            412 | OK      |
++----------------------------+--------------------+------------+---------+-----------+----------------+---------+
+| Instruction Following & Co | GPT-OSS 120B       |      74.01 |     450 |       6.1 |            344 | OK      |
+|                            | Gemma 4 31B-IT     |      52.54 |     N/A |       N/A |              0 | ERR     |
+|                            | Nemotron Nano 9B   |      15.00 |     N/A |       N/A |              0 | ERR     |
++----------------------------+--------------------+------------+---------+-----------+----------------+---------+
+
+--------------------------------------------------------------------------------
+  SECTION 2 — PER-CATEGORY WINNERS
+--------------------------------------------------------------------------------
+
++----------------------------+----------------------+------------------------+----------------------+
+| Category                   | Fastest              | Best Tok/s             | Errors               |
++----------------------------+----------------------+------------------------+----------------------+
+| Mathematical Reasoning     | Nemotron Nano 9B     | Nemotron N (15.1 t/s)  | GPT-OSS , Gemma 4    |
+| Logical & Deductive Reason | Nemotron Nano 9B     | Nemotron N (41.7 t/s)  | GPT-OSS              |
+| Code Generation & Algorith | Nemotron Nano 9B     | Nemotron N (20.1 t/s)  | Gemma 4              |
+| Factual & Technical Knowle | Gemma 4 31B-IT       | Nemotron N (40.9 t/s)  | none                 |
+| Instruction Following & Co | GPT-OSS 120B         | GPT-OSS 12 (6.1 t/s)   | Gemma 4 , Nemotron   |
++----------------------------+----------------------+------------------------+----------------------+
+
+--------------------------------------------------------------------------------
+  SECTION 3 — OVERALL MODEL RANKINGS
+--------------------------------------------------------------------------------
+
++----------------------+----------------+--------------+------------+------------+----------+
+| Model                |    Avg Lat (s) |  Min Lat (s) | Max Lat (… |  Avg Tok/s |   Errors |
++----------------------+----------------+--------------+------------+------------+----------+
+| Nemotron Nano 9B     |          18.83 |         8.59 |      29.86 |       29.4 |        1 |
+| Gemma 4 31B-IT       |          42.96 |         3.68 |      57.92 |       11.4 |        3 |
+| GPT-OSS 120B         |          48.72 |         5.73 |      74.01 |       11.6 |        2 |
++----------------------+----------------+--------------+------------+------------+----------+
+
+--------------------------------------------------------------------------------
+  SECTION 4 — LATENCY MATRIX  (seconds per category)
+--------------------------------------------------------------------------------
+
++----------------------------+------------------+------------------+------------------+
+| Category                   |     GPT-OSS 120B |   Gemma 4 31B-IT | Nemotron Nano 9B |
++----------------------------+------------------+------------------+------------------+
+| Mathematical Reasoning     |              ERR |              ERR |           29.49s |
+| Logical & Deductive Reason |              ERR |           57.92s |           11.21s |
+| Code Generation & Algorith |           61.62s |              ERR |           29.86s |
+| Factual & Technical Knowle |            5.73s |            3.68s |            8.59s |
+| Instruction Following & Co |           74.01s |              ERR |              ERR |
++----------------------------+------------------+------------------+------------------+
+
+--------------------------------------------------------------------------------
+  SECTION 5 — THROUGHPUT MATRIX  (completion tokens / second)
+  Note: N/A = token count not returned by free-tier endpoint
+--------------------------------------------------------------------------------
+
++----------------------------+------------------+------------------+------------------+
+| Category                   |     GPT-OSS 120B |   Gemma 4 31B-IT | Nemotron Nano 9B |
++----------------------------+------------------+------------------+------------------+
+| Mathematical Reasoning     |              ERR |              ERR |             15.1 |
+| Logical & Deductive Reason |              ERR |              3.2 |             41.7 |
+| Code Generation & Algorith |              3.2 |              ERR |             20.1 |
+| Factual & Technical Knowle |             25.5 |             19.6 |             40.9 |
+| Instruction Following & Co |              6.1 |              ERR |              ERR |
++----------------------------+------------------+------------------+------------------+
+
+--------------------------------------------------------------------------------
+  SECTION 6 — EVALUATION DESIGN & FAIRNESS NOTES
+--------------------------------------------------------------------------------
+
+  Category design (inspired by established benchmarks):
+
+  [math_reasoning]
+    Name:        Mathematical Reasoning
+    Tests:       Multi-step arithmetic, algebra, geometry, combinatorics
+    Inspired by: GSM8K, MATH
+    Constraint:  Show step-by-step working. Put the final answer on its own line as: ANSWER:…
+
+  [logical_reasoning]
+    Name:        Logical & Deductive Reasoning
+    Tests:       Syllogisms, conditionals, puzzles, sequence patterns
+    Inspired by: BIG-Bench, LogiQA, Winogrande
+    Constraint:  Reason step by step. Put the conclusion on its own line as: ANSWER: [your c…
+
+  [code_generation]
+    Name:        Code Generation & Algorithmic Problem Solving
+    Tests:       Algorithm implementation, correctness, edge cases
+    Inspired by: HumanEval, MBPP
+    Constraint:  Provide Python 3 code only. Include a one-line docstring. End with exactly …
+
+  [factual_knowledge]
+    Name:        Factual & Technical Knowledge
+    Tests:       Computer science fundamentals and concise recall
+    Inspired by: MMLU, TriviaQA
+    Constraint:  Answer in exactly 2 to 3 sentences. No bullets or numbered lists.
+
+  [instruction_following]
+    Name:        Instruction Following & Constraint Adherence
+    Tests:       Format compliance, counting, and label adherence
+    Inspired by: IFEval, FollowBench
+    Constraint:  Follow every constraint exactly. Any deviation counts as failure.
+
+  Fairness constraints applied:
+    1. max_tokens=600  — prevents verbosity bias (HELM / LLM-as-Judge finding)
+    2. temperature=0   — deterministic decoding for reproducibility (GSM8K standard)
+    3. Identical system prompt for all models (removes prompt-sensitivity variance)
+    4. Output format constraint baked into every prompt (IFEval methodology)
+    5. Culturally neutral prompts — no region-specific names, currencies, or refs
+    6. All models queried in parallel to minimise server-load variance
+
+================================================================================
+  END OF REPORT
+================================================================================

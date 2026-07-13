@@ -1,0 +1,53 @@
+2026-07-06T04:57:09 | PreToolUse   | tool=unit_test | input={"q": 1}
+2026-07-06T04:57:35 | PreToolUse   | tool=ToolSearch | input={"query": "select:mcp__research__read_file,mcp__research__remember_fact,mcp__research__recall_facts", "max_results": 3}
+2026-07-06T04:57:35 | PostToolUse  | tool=ToolSearch | input={"query": "select:mcp__research__read_file,mcp__research__remember_fact,mcp__research__recall_facts", "max_results": 3}
+2026-07-06T04:57:39 | PreToolUse   | tool=mcp__research__read_file | input={"path": "sample_notes.txt"}
+2026-07-06T04:57:39 | PostToolUse  | tool=mcp__research__read_file | input={"path": "sample_notes.txt"}
+2026-07-06T04:57:39 | PreToolUse   | tool=mcp__research__read_file | input={"path": "sample_doc.pdf"}
+2026-07-06T04:57:39 | PostToolUse  | tool=mcp__research__read_file | input={"path": "sample_doc.pdf"}
+2026-07-06T04:57:43 | PreToolUse   | tool=mcp__research__remember_fact | input={"key": "client_hq_city", "value": "Jakarta, Indonesia (client: PT Nusantara Digital)"}
+2026-07-06T04:57:43 | PostToolUse  | tool=mcp__research__remember_fact | input={"key": "client_hq_city", "value": "Jakarta, Indonesia (client: PT Nusantara Digital)"}
+2026-07-06T04:57:43 | PreToolUse   | tool=mcp__research__remember_fact | input={"key": "offsite_month", "value": "August 2026"}
+2026-07-06T04:57:44 | PostToolUse  | tool=mcp__research__remember_fact | input={"key": "offsite_month", "value": "August 2026"}
+2026-07-06T04:57:44 | PreToolUse   | tool=mcp__research__remember_fact | input={"key": "team_size", "value": "12 people"}
+2026-07-06T04:57:44 | PostToolUse  | tool=mcp__research__remember_fact | input={"key": "team_size", "value": "12 people"}
+2026-07-06T04:57:45 | PreToolUse   | tool=mcp__research__remember_fact | input={"key": "budget_cap", "value": "15,000 USD (total budget cap, approved by Finance June 2026)"}
+2026-07-06T04:57:45 | PostToolUse  | tool=mcp__research__remember_fact | input={"key": "budget_cap", "value": "15,000 USD (total budget cap, approved by Finance June 2026)"}
+2026-07-06T04:57:45 | PreToolUse   | tool=mcp__research__remember_fact | input={"key": "hotel_budget", "value": "90 USD per night per person"}
+2026-07-06T04:57:45 | PostToolUse  | tool=mcp__research__remember_fact | input={"key": "hotel_budget", "value": "90 USD per night per person"}
+2026-07-06T04:57:55 | PreToolUse   | tool=mcp__research__recall_facts | input={}
+2026-07-06T04:57:55 | PostToolUse  | tool=mcp__research__recall_facts | input={}
+2026-07-06T04:57:56 | PreToolUse   | tool=ToolSearch | input={"query": "select:mcp__research__web_search", "max_results": 1}
+2026-07-06T04:57:56 | PostToolUse  | tool=ToolSearch | input={"query": "select:mcp__research__web_search", "max_results": 1}
+2026-07-06T04:58:01 | PreToolUse   | tool=mcp__research__web_search | input={"query": "Jakarta Indonesia travel disruption news 2026"}
+2026-07-06T04:58:06 | PostToolUse  | tool=mcp__research__web_search | input={"query": "Jakarta Indonesia travel disruption news 2026"}
+2026-07-06T04:58:06 | PreToolUse   | tool=mcp__research__web_search | input={"query": "Jakarta hotel price per night USD 2026 average"}
+2026-07-06T04:58:10 | PostToolUse  | tool=mcp__research__web_search | input={"query": "Jakarta hotel price per night USD 2026 average"}
+2026-07-06T04:58:21 | PreToolUse   | tool=mcp__research__remember_fact | input={"key": "jakarta_travel_news", "value": "Flight disruptions recorded at Jakarta Soekarno-Hatta International Airport on 1 July 2026 \u2014 cancellations and delays reported (source: travelandtourworld.com)"}
+2026-07-06T04:58:21 | PostToolUse  | tool=mcp__research__remember_fact | input={"key": "jakarta_travel_news", "value": "Flight disruptions recorded at Jakarta Soekarno-Hatta International Airport on 1 July 2026 \u2014 cancellations and delays reported (source: travelandtourworld.com)"}
+2026-07-06T04:58:22 | PreToolUse   | tool=mcp__research__remember_fact | input={"key": "jakarta_hotel_rates", "value": "Average double room ~$133/night (Kayak 2026); deals from ~$53/night. Trip.com average ~$46/night. Wide range from budget ($7-10) to mid-range."}
+2026-07-06T04:58:22 | PostToolUse  | tool=mcp__research__remember_fact | input={"key": "jakarta_hotel_rates", "value": "Average double room ~$133/night (Kayak 2026); deals from ~$53/night. Trip.com average ~$46/night. Wide range from budget ($7-10) to mid-range."}
+2026-07-06T04:59:13 | PreToolUse   | tool=ToolSearch | input={"query": "select:mcp__research__read_file,mcp__research__remember_fact,mcp__research__recall_facts", "max_results": 3}
+2026-07-06T04:59:13 | PostToolUse  | tool=ToolSearch | input={"query": "select:mcp__research__read_file,mcp__research__remember_fact,mcp__research__recall_facts", "max_results": 3}
+2026-07-06T04:59:16 | PreToolUse   | tool=mcp__research__read_file | input={"path": "sample_notes.txt"}
+2026-07-06T04:59:16 | PostToolUse  | tool=mcp__research__read_file | input={"path": "sample_notes.txt"}
+2026-07-06T04:59:17 | PreToolUse   | tool=mcp__research__read_file | input={"path": "sample_doc.pdf"}
+2026-07-06T04:59:17 | PostToolUse  | tool=mcp__research__read_file | input={"path": "sample_doc.pdf"}
+2026-07-06T04:59:24 | PreToolUse   | tool=mcp__research__remember_fact | input={"key": "client_hq_city", "value": "Jakarta, Indonesia (Client: PT Nusantara Digital)"}
+2026-07-06T04:59:24 | PostToolUse  | tool=mcp__research__remember_fact | input={"key": "client_hq_city", "value": "Jakarta, Indonesia (Client: PT Nusantara Digital)"}
+2026-07-06T04:59:24 | PreToolUse   | tool=mcp__research__remember_fact | input={"key": "offsite_month", "value": "August 2026"}
+2026-07-06T04:59:24 | PostToolUse  | tool=mcp__research__remember_fact | input={"key": "offsite_month", "value": "August 2026"}
+2026-07-06T04:59:25 | PreToolUse   | tool=mcp__research__remember_fact | input={"key": "team_size", "value": "12 people"}
+2026-07-06T04:59:25 | PostToolUse  | tool=mcp__research__remember_fact | input={"key": "team_size", "value": "12 people"}
+2026-07-06T04:59:25 | PreToolUse   | tool=mcp__research__remember_fact | input={"key": "budget_cap", "value": "15,000 USD (Total budget cap, approved by Finance June 2026)"}
+2026-07-06T04:59:25 | PostToolUse  | tool=mcp__research__remember_fact | input={"key": "budget_cap", "value": "15,000 USD (Total budget cap, approved by Finance June 2026)"}
+2026-07-06T04:59:26 | PreToolUse   | tool=mcp__research__remember_fact | input={"key": "hotel_budget", "value": "90 USD per night per person"}
+2026-07-06T04:59:26 | PostToolUse  | tool=mcp__research__remember_fact | input={"key": "hotel_budget", "value": "90 USD per night per person"}
+2026-07-06T04:59:36 | PreToolUse   | tool=mcp__research__recall_facts | input={}
+2026-07-06T04:59:36 | PostToolUse  | tool=mcp__research__recall_facts | input={}
+2026-07-06T04:59:41 | PreToolUse   | tool=ToolSearch | input={"query": "select:mcp__research__web_search", "max_results": 1}
+2026-07-06T04:59:41 | PostToolUse  | tool=ToolSearch | input={"query": "select:mcp__research__web_search", "max_results": 1}
+2026-07-06T04:59:44 | PreToolUse   | tool=mcp__research__web_search | input={"query": "Jakarta Indonesia travel disruption news 2026"}
+2026-07-06T04:59:45 | PostToolUse  | tool=mcp__research__web_search | input={"query": "Jakarta Indonesia travel disruption news 2026"}
+2026-07-06T04:59:45 | PreToolUse   | tool=mcp__research__web_search | input={"query": "Jakarta hotel price per night USD 2026 average"}
+2026-07-06T04:59:46 | PostToolUse  | tool=mcp__research__web_search | input={"query": "Jakarta hotel price per night USD 2026 average"}

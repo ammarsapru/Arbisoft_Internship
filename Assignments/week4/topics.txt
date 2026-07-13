@@ -1,0 +1,140 @@
+WEEK 4 - AGENTIC AI: TOPIC NOTES
+=================================
+Goal: understand the core primitives of agentic AI - remember context,
+call tools, and chain reasoning. Where relevant, each topic points at the
+concrete implementation in this repo (research-agent/).
+
+----------------------------------------------------------------------
+1. WHAT ARE AI AGENTS? AGENTS vs CHATBOTS vs COPILOTS
+----------------------------------------------------------------------
+- Chatbot: single request -> single response. No tools, no goals, no state
+  beyond the visible conversation (e.g. a plain LLM chat window).
+- Copilot: assists a human who stays in the driver's seat. Suggests, the
+  human accepts/rejects each step (e.g. autocomplete in an IDE).
+- Agent: given a GOAL, it plans, calls tools, observes results, and loops
+  until the goal is met - deciding its own next step. The human reviews the
+  outcome, not every step.
+- In this repo: research-agent/demo.py gives one goal per turn; the agent
+  decides by itself to read files, store memory, and run web searches.
+
+----------------------------------------------------------------------
+2. AGENT ARCHITECTURE: PLANNER -> EXECUTOR -> MEMORY LOOP
+----------------------------------------------------------------------
+The core loop: gather context -> plan -> act (tool call) -> observe result
+-> update memory -> repeat until done.
+- Planner: the LLM decides what to do next (visible as ThinkingBlocks and
+  the text between tool calls).
+- Executor: the harness actually runs the chosen tool and feeds the result
+  back as a tool_result message.
+- Memory: what persists across steps - conversation history (short-term)
+  plus explicit stores (long-term).
+- In the Claude Agent SDK, query()/ClaudeSDKClient run this whole loop for
+  you; you see it as the stream of AssistantMessage -> ToolUseBlock ->
+  ToolResultBlock -> ... -> ResultMessage.
+
+----------------------------------------------------------------------
+3. SKILLS (TOOLS / FUNCTIONS): DEFINING AND REGISTERING CALLABLE SKILLS
+----------------------------------------------------------------------
+A skill/tool = name + description + typed input schema + implementation.
+The description is what the model uses to decide WHEN to call it, so write
+it prescriptively ("use this for current events...").
+- In this repo (research_agent.py): the @tool decorator defines each skill,
+  and create_sdk_mcp_server([...]) registers them as an in-process MCP
+  server. allowed_tools=["mcp__research__web_search", ...] grants them.
+- Tool naming: mcp__<server>__<tool> (two underscores).
+
+----------------------------------------------------------------------
+4. FUNCTION CALLING WITH CLAUDE API AND OPENAI-COMPATIBLE APIS
+----------------------------------------------------------------------
+Same idea in both ecosystems, different wire format:
+- Claude Messages API: tools=[{name, description, input_schema}]. The model
+  answers with stop_reason="tool_use" and a tool_use content block; you run
+  the function and send back a tool_result block in a user message, looping
+  until stop_reason="end_turn".
+- OpenAI-compatible APIs: tools=[{type:"function", function:{name,
+  parameters}}]; the model returns tool_calls with JSON arguments; you
+  reply with role:"tool" messages.
+- Both are "the model emits a structured intent; YOUR code executes it".
+  The model never executes anything itself.
+
+----------------------------------------------------------------------
+5. HOOKS: PRE/POST-ACTION INTERCEPTORS IN AGENT PIPELINES
+----------------------------------------------------------------------
+Hooks are deterministic code that runs at lifecycle points of the agent
+loop (PreToolUse, PostToolUse, Stop, ...). Uses: logging/audit, policy
+enforcement (block dangerous calls), input rewriting, notifications.
+- In this repo: research_agent.log_tool_call is registered for PreToolUse
+  and PostToolUse via HookMatcher; it appends a timestamped line for every
+  tool call to research-agent/tool_calls.log.
+- Key property: hooks are code, not prompts - they ALWAYS run, the model
+  cannot skip them.
+
+----------------------------------------------------------------------
+6. MEMORY TYPES: IN-CONTEXT, VECTOR (CHROMADB), KEY-VALUE STORES
+----------------------------------------------------------------------
+- In-context memory: the conversation history itself. Free and automatic,
+  but limited by the context window and lost when the session ends.
+  (Demo turn 2 relies on this: the client keeps one session across turns.)
+- Key-value store: explicit facts under keys; exact lookup, cheap, easy to
+  inspect. (remember_fact/recall_facts in research_agent.py - a Python
+  dict; in production this could be Redis or a DB.)
+- Vector store (e.g. ChromaDB): texts are embedded into vectors; retrieval
+  is by semantic similarity ("what's relevant to this query?") rather than
+  exact key. Powers RAG - retrieve top-k chunks, stuff them into context.
+- Rule of thumb: exact facts -> key-value; fuzzy recall over lots of
+  documents -> vector; short session state -> in-context.
+
+----------------------------------------------------------------------
+7. PLUGINS: EXTENDING AGENTS WITH SEARCH, CODE EXECUTION, FILE I/O
+----------------------------------------------------------------------
+"Plugin" = a packaged capability added to an agent beyond the base model:
+web search, code execution/sandboxes, file I/O, third-party services
+(often via MCP - Model Context Protocol - servers).
+- In this repo: web_search (SerpApi REST plugin), read_file (.txt/.pdf
+  file-I/O plugin using pypdf), and first-agent/mcp_server_serp.py shows
+  the remote-MCP-server variant of the same capability.
+- MCP standardizes the plugin interface: any MCP server (GitHub, Slack,
+  SerpApi...) can be attached to any MCP-capable agent.
+
+----------------------------------------------------------------------
+8. MULTI-STEP REASONING: CHAIN-OF-THOUGHT, ReAct PATTERN
+----------------------------------------------------------------------
+- Chain-of-thought (CoT): the model reasons step by step before answering,
+  which improves accuracy on multi-step problems. Modern models do this
+  natively as "thinking" (ThinkingBlocks in the SDK stream).
+- ReAct (Reason + Act): interleave Thought -> Action (tool call) ->
+  Observation (tool result) -> Thought -> ... until a final Answer. This is
+  exactly the agent loop: each observation grounds the next thought.
+- Multi-hop questions need this: "find news about the city in my notes"
+  requires hop 1 (what city is in the notes?) before hop 2 (search news
+  about it). See demo.py turn 2.
+
+----------------------------------------------------------------------
+9. INTRO TO LANGCHAIN & LLAMAINDEX (AGENTS & RETRIEVAL)
+----------------------------------------------------------------------
+- LangChain: general framework for composing LLM apps - chains (fixed
+  pipelines), agents (dynamic tool-calling loops), memory classes, and
+  hundreds of tool/vector-store integrations. LangGraph is its
+  graph-based successor for stateful, controllable agent workflows.
+- LlamaIndex: strongest at RETRIEVAL - ingesting documents, indexing them
+  (vector/keyword/graph indexes), and querying them; also has agents, but
+  its center of gravity is RAG over your data.
+- Positioning: LangChain = orchestration-first, LlamaIndex = data-first,
+  Claude Agent SDK = a batteries-included agent runtime (loop, tools,
+  permissions, hooks come from the Claude Code engine rather than being
+  assembled from library pieces).
+
+----------------------------------------------------------------------
+10. AGENTIC CODING TOOLS SURVEY: CURSOR, WINDSURF, CLAUDE CODE
+----------------------------------------------------------------------
+- Cursor: VS Code fork with AI built in - inline edits, codebase-aware
+  chat, and an agent mode that can implement multi-file changes.
+- Windsurf: IDE with "Cascade" agentic flows - similar space to Cursor,
+  emphasizes automatic context gathering and multi-step edits.
+- Claude Code: terminal-first agent (also IDE extensions/web). Strong at
+  autonomous multi-step work: runs commands, edits files, uses hooks/
+  skills/MCP, and is scriptable via the Claude Agent SDK - which is what
+  this week's assignment builds on.
+- Common thread: all are ReAct-style loops over a codebase with file-edit
+  and shell tools; they differ in UI (IDE vs terminal), autonomy defaults,
+  and extensibility.

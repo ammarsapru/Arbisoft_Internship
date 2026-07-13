@@ -1,0 +1,175 @@
+PYDANTIC — WHAT IT IS AND HOW IT WORKS
+=========================================
+
+1. WHAT PROBLEM IT SOLVES
+--------------------------
+Python is dynamically typed: nothing stops a function from receiving a
+string where it expected an int, or a dict missing a required key. Type
+hints alone (`def f(x: int)`) are not enforced at runtime — they're purely
+documentation for humans and static analysis tools like mypy.
+
+Pydantic closes that gap for data at runtime. You describe the shape you
+expect as a class with type-annotated fields, and Pydantic will:
+  - parse raw input (usually a dict, often straight from JSON) into that
+    shape,
+  - validate every field against its declared type and any constraints,
+  - either return a fully-typed, guaranteed-valid object, or raise a
+    single structured exception listing every problem it found.
+
+It's most commonly reached for at "trust boundaries" — anywhere data enters
+your program from outside: HTTP request bodies, config files, environment
+variables, CLI args, database rows, or (increasingly) LLM output.
+
+
+2. THE CORE BUILDING BLOCK: BaseModel
+----------------------------------------
+    from pydantic import BaseModel, Field
+
+    class User(BaseModel):
+        name: str
+        age: int
+        email: str | None = None
+
+    u = User.model_validate({"name": "Ammar", "age": "30"})
+    # age "30" (a string) becomes the int 30 by default — see "strict mode" below
+    u.name        # "Ammar"
+    u.model_dump()  # {"name": "Ammar", "age": 30, "email": None}
+    u.model_dump_json()  # '{"name":"Ammar","age":30,"email":null}'
+
+Key methods on any BaseModel subclass:
+  model_validate(data)       Parse + validate a dict (or other mapping) into
+                              an instance. Raises ValidationError on failure.
+  model_validate_json(text)  Same, but parses a JSON string directly.
+  model_dump()                Serialize the instance back to a plain dict.
+  model_dump_json()           Serialize straight to a JSON string.
+  model_json_schema()         Generate a JSON Schema (dict) describing the
+                              model's shape — this is what lets Pydantic
+                              models double as API contracts, OpenAPI specs,
+                              or (relevantly for LLM work) a constraint fed
+                              to a model's structured-output/constrained-
+                              decoding feature.
+
+
+3. VALIDATION ERRORS
+----------------------
+When validation fails, Pydantic raises `pydantic.ValidationError`, a single
+exception that aggregates every field-level problem (not just the first
+one), each with a path, an error type, and a message. This is one of
+Pydantic's most useful properties for anything parsing external data (like
+LLM output): you get one exception, not a crash on the first bad field with
+no visibility into what else was wrong.
+
+    try:
+        User.model_validate({"age": "not a number"})
+    except ValidationError as e:
+        print(e.errors())
+        # [{'type': 'missing', 'loc': ('name',), ...},
+        #  {'type': 'int_parsing', 'loc': ('age',), ...}]
+
+Because ValidationError is a specific exception type, calling code
+typically catches it and translates it into a domain-specific error rather
+than leaking Pydantic's exception type further up the call stack.
+
+
+4. FIELD CONSTRAINTS
+-----------------------
+`Field(...)` attaches metadata and constraints beyond the bare type:
+
+    class Citation(BaseModel):
+        page: int = Field(ge=0)              # must be >= 0
+        quote: str = Field(min_length=1)      # must be non-empty
+
+Common constraint kwargs: `gt`/`ge`/`lt`/`le` (numeric bounds), `min_length`
+/`max_length` (strings, lists), `pattern` (regex for strings), `default`
+(default value), `description` (shows up in the generated JSON schema).
+
+Field-level and whole-model custom validation is also possible via
+`@field_validator` (checks/transforms one field) and `@model_validator`
+(checks relationships between multiple fields), for constraints that can't
+be expressed as a simple type + Field combination.
+
+
+5. MODEL CONFIGURATION: model_config
+----------------------------------------
+`model_config = ConfigDict(...)` on a BaseModel controls how strict/lenient
+validation is. The two settings worth knowing:
+
+  extra="forbid"   Reject any input dict with keys not declared on the
+                    model (default is "ignore", which silently drops
+                    unknown keys). Use "forbid" when unexpected extra
+                    fields signal a problem worth surfacing rather than
+                    swallowing quietly.
+
+  strict=True       Disable Pydantic's default "lax" coercion. By default,
+                    Pydantic tries to be helpful: `"30"` coerces to the int
+                    30, `"true"`/`1` coerce to bool True, etc. In strict
+                    mode, the input's Python/JSON type must already match
+                    the declared type exactly — a string where an int is
+                    expected is a validation error, not a silent
+                    conversion. This matters most when the input source
+                    could plausibly emit the "wrong" type as a real bug
+                    signal — e.g. an LLM emitting `"page": "30"` instead of
+                    `"page": 30` — in which case tolerating the coercion
+                    would mask the model breaking its output contract.
+
+Other config options exist (frozen models, alias generation for
+camelCase<->snake_case, arbitrary type support, etc.) but the two above are
+the ones most relevant to "validating data from an untrusted or
+semi-trusted source."
+
+
+6. NESTED MODELS AND COLLECTIONS
+------------------------------------
+BaseModels compose naturally — a field can be another BaseModel, or a list
+of them, and validation recurses automatically:
+
+    class Citation(BaseModel):
+        page: int
+        quote: str
+
+    class Answer(BaseModel):
+        text: str
+        citations: list[Citation]   # each dict in the list is validated
+                                     # as a Citation; a bad one anywhere in
+                                     # the list fails validation with a
+                                     # precise index in the error path.
+
+This is how you validate structured, nested JSON (like a typical LLM
+JSON response with a list of sub-objects) in one call rather than manually
+looping and checking each item.
+
+
+7. WHERE PYDANTIC SHOWS UP IN PRACTICE
+------------------------------------------
+  - FastAPI: request/response bodies are Pydantic models; FastAPI both
+    validates incoming JSON against them and auto-generates OpenAPI docs
+    from `model_json_schema()`.
+  - Settings/config: `pydantic-settings` reads environment variables into a
+    typed, validated settings object.
+  - LLM structured output: increasingly common pattern — define the shape
+    you want the model to return as a BaseModel, get its JSON schema via
+    `model_json_schema()`, pass that schema to the model (either as a
+    constrained-decoding parameter some providers support, or just
+    embedded in the prompt as an instruction), then validate whatever text
+    comes back with `model_validate()`. This turns "hope the model returns
+    well-formed JSON" into "guarantee that if downstream code receives an
+    object, it is well-formed" — malformed responses are caught and
+    handled explicitly rather than causing a KeyError three functions
+    later.
+  - General data pipelines: anywhere you'd otherwise write a pile of
+    `if not isinstance(...)` / `if key not in data` checks by hand,
+    a BaseModel replaces that with declarative field definitions.
+
+
+8. WHAT PYDANTIC DOES NOT DO
+--------------------------------
+  - It doesn't call any network APIs, doesn't know what an LLM is, doesn't
+    format prompts. It is purely a data-shape validation/serialization
+    library — it just happens to compose very naturally with anything that
+    produces semi-structured text (like LLM output) because JSON Schema is
+    a common target format for constrained generation, and
+    model_validate() is a convenient single gate for "is this well-formed."
+  - It doesn't guarantee the *content* is correct/truthful — only that the
+    *shape* and basic constraints (types, ranges, required fields) are
+    satisfied. A schema-valid answer can still be factually wrong; that's a
+    separate, content-level check outside Pydantic's scope.

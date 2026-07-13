@@ -1,0 +1,80 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Length 992 >>
+stream
+BT /F1 11 Tf 72 740 Td 15 TL
+(TRAVEL PLAN - Autumn 2026 Multi-City Trip) Tj
+T*
+() Tj
+T*
+(Traveler: 1 adult, economy class) Tj
+T*
+(Start location: Lahore, Pakistan \(LHE\)) Tj
+T*
+(Trip type: round trip \(must return to Lahore\)) Tj
+T*
+(Total budget for flights + hotels: 3,500 USD) Tj
+T*
+() Tj
+T*
+(LEG 1: Lahore -> Istanbul, Turkey) Tj
+T*
+(  Departure date: 2026-09-10) Tj
+T*
+(  Desired arrival time: before 18:00 local time) Tj
+T*
+(  Stay: 4 nights \(2026-09-10 to 2026-09-14\)) Tj
+T*
+(  Hotel budget: 110 USD per night, near Sultanahmet if possible) Tj
+T*
+() Tj
+T*
+(LEG 2: Istanbul -> Paris, France) Tj
+T*
+(  Departure date: 2026-09-14) Tj
+T*
+(  Desired arrival time: before 15:00 local time) Tj
+T*
+(  Stay: 3 nights \(2026-09-14 to 2026-09-17\)) Tj
+T*
+(  Hotel budget: 150 USD per night) Tj
+T*
+() Tj
+T*
+(RETURN: Paris -> Lahore) Tj
+T*
+(  Departure date: 2026-09-17) Tj
+T*
+(  Flexible on arrival time.) Tj
+T*
+() Tj
+T*
+(Note: prefer at most 1 stop per flight; avoid overnight layovers.) Tj
+ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000000311 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+1354
+%%EOF

@@ -1,0 +1,75 @@
+2026-07-07T20:58:19 | PreToolUse   | tool=unit_test | input={"x": 1}
+2026-07-07T20:59:11 | PreToolUse   | tool=ToolSearch | input={"query": "select:mcp__travel__read_file,mcp__travel__recall_facts,mcp__travel__remember_fact,mcp__travel__search_flights,mcp__travel__search_hotels", "max_results": 5}
+2026-07-07T20:59:11 | PostToolUse  | tool=ToolSearch | input={"query": "select:mcp__travel__read_file,mcp__travel__recall_facts,mcp__travel__remember_fact,mcp__travel__search_flights,mcp__travel__search_hotels", "max_results": 5}
+2026-07-07T20:59:14 | PreToolUse   | tool=mcp__travel__read_file | input={"path": "trip_plan.pdf"}
+2026-07-07T20:59:14 | PostToolUse  | tool=mcp__travel__read_file | input={"path": "trip_plan.pdf"}
+2026-07-07T20:59:37 | PreToolUse   | tool=mcp__travel__remember_fact | input={"key": "traveler", "value": "1 adult, economy class"}
+2026-07-07T20:59:37 | PostToolUse  | tool=mcp__travel__remember_fact | input={"key": "traveler", "value": "1 adult, economy class"}
+2026-07-07T20:59:37 | PreToolUse   | tool=mcp__travel__remember_fact | input={"key": "start_location", "value": "Lahore, Pakistan (LHE)"}
+2026-07-07T20:59:37 | PostToolUse  | tool=mcp__travel__remember_fact | input={"key": "start_location", "value": "Lahore, Pakistan (LHE)"}
+2026-07-07T20:59:38 | PreToolUse   | tool=mcp__travel__remember_fact | input={"key": "trip_type", "value": "round_trip (multi-city: LHE \u2192 IST \u2192 CDG \u2192 LHE)"}
+2026-07-07T20:59:38 | PostToolUse  | tool=mcp__travel__remember_fact | input={"key": "trip_type", "value": "round_trip (multi-city: LHE \u2192 IST \u2192 CDG \u2192 LHE)"}
+2026-07-07T20:59:38 | PreToolUse   | tool=mcp__travel__remember_fact | input={"key": "total_budget_usd", "value": "3500 USD (flights + hotels combined)"}
+2026-07-07T20:59:38 | PostToolUse  | tool=mcp__travel__remember_fact | input={"key": "total_budget_usd", "value": "3500 USD (flights + hotels combined)"}
+2026-07-07T20:59:40 | PreToolUse   | tool=mcp__travel__remember_fact | input={"key": "leg1", "value": "LHE \u2192 IST, depart 2026-09-10, arrive before 18:00 local, 4-night stay (Sep 10\u201314), hotel max $110/night near Sultanahmet"}
+2026-07-07T20:59:40 | PostToolUse  | tool=mcp__travel__remember_fact | input={"key": "leg1", "value": "LHE \u2192 IST, depart 2026-09-10, arrive before 18:00 local, 4-night stay (Sep 10\u201314), hotel max $110/night near Sultanahmet"}
+2026-07-07T20:59:40 | PreToolUse   | tool=mcp__travel__remember_fact | input={"key": "leg2", "value": "IST \u2192 CDG, depart 2026-09-14, arrive before 15:00 local, 3-night stay (Sep 14\u201317), hotel max $150/night"}
+2026-07-07T20:59:40 | PostToolUse  | tool=mcp__travel__remember_fact | input={"key": "leg2", "value": "IST \u2192 CDG, depart 2026-09-14, arrive before 15:00 local, 3-night stay (Sep 14\u201317), hotel max $150/night"}
+2026-07-07T20:59:41 | PreToolUse   | tool=mcp__travel__remember_fact | input={"key": "return_leg", "value": "CDG \u2192 LHE, depart 2026-09-17, arrival time flexible"}
+2026-07-07T20:59:41 | PostToolUse  | tool=mcp__travel__remember_fact | input={"key": "return_leg", "value": "CDG \u2192 LHE, depart 2026-09-17, arrival time flexible"}
+2026-07-07T20:59:42 | PreToolUse   | tool=mcp__travel__remember_fact | input={"key": "flight_preferences", "value": "max 1 stop per flight, avoid overnight layovers"}
+2026-07-07T20:59:42 | PostToolUse  | tool=mcp__travel__remember_fact | input={"key": "flight_preferences", "value": "max 1 stop per flight, avoid overnight layovers"}
+2026-07-07T20:59:43 | PreToolUse   | tool=mcp__travel__remember_fact | input={"key": "budget_breakdown", "value": "Hotels max: $440 (IST 4\u00d7$110) + $450 (CDG 3\u00d7$150) = $890. Remaining for 3 flights: $2,610"}
+2026-07-07T20:59:43 | PostToolUse  | tool=mcp__travel__remember_fact | input={"key": "budget_breakdown", "value": "Hotels max: $440 (IST 4\u00d7$110) + $450 (CDG 3\u00d7$150) = $890. Remaining for 3 flights: $2,610"}
+2026-07-07T20:59:44 | PreToolUse   | tool=mcp__travel__search_flights | input={"departure_id": "LHE", "arrival_id": "IST", "outbound_date": "2026-09-10", "trip_type": "one_way", "max_price_usd": 1000}
+2026-07-07T20:59:48 | PostToolUse  | tool=mcp__travel__search_flights | input={"departure_id": "LHE", "arrival_id": "IST", "outbound_date": "2026-09-10", "trip_type": "one_way", "max_price_usd": 1000}
+2026-07-07T20:59:48 | PreToolUse   | tool=mcp__travel__search_flights | input={"departure_id": "IST", "arrival_id": "CDG", "outbound_date": "2026-09-14", "trip_type": "one_way", "max_price_usd": 500}
+2026-07-07T20:59:52 | PostToolUse  | tool=mcp__travel__search_flights | input={"departure_id": "IST", "arrival_id": "CDG", "outbound_date": "2026-09-14", "trip_type": "one_way", "max_price_usd": 500}
+2026-07-07T20:59:52 | PreToolUse   | tool=mcp__travel__search_flights | input={"departure_id": "CDG", "arrival_id": "LHE", "outbound_date": "2026-09-17", "trip_type": "one_way", "max_price_usd": 1100}
+2026-07-07T20:59:55 | PostToolUse  | tool=mcp__travel__search_flights | input={"departure_id": "CDG", "arrival_id": "LHE", "outbound_date": "2026-09-17", "trip_type": "one_way", "max_price_usd": 1100}
+2026-07-07T20:59:55 | PreToolUse   | tool=mcp__travel__search_hotels | input={"city": "Istanbul, Turkey", "check_in_date": "2026-09-10", "check_out_date": "2026-09-14", "adults": 1, "max_price_per_night_usd": 110}
+2026-07-07T21:00:01 | PostToolUse  | tool=mcp__travel__search_hotels | input={"city": "Istanbul, Turkey", "check_in_date": "2026-09-10", "check_out_date": "2026-09-14", "adults": 1, "max_price_per_night_usd": 110}
+2026-07-07T21:00:01 | PreToolUse   | tool=mcp__travel__search_hotels | input={"city": "Paris, France", "check_in_date": "2026-09-14", "check_out_date": "2026-09-17", "adults": 1, "max_price_per_night_usd": 150}
+2026-07-07T21:00:06 | PostToolUse  | tool=mcp__travel__search_hotels | input={"city": "Paris, France", "check_in_date": "2026-09-14", "check_out_date": "2026-09-17", "adults": 1, "max_price_per_night_usd": 150}
+2026-07-07T21:01:59 | PreToolUse   | tool=ToolSearch | input={"query": "select:mcp__travel__remember_fact,mcp__travel__recall_facts,mcp__travel__search_flights,mcp__travel__search_hotels,mcp__travel__read_file", "max_results": 5}
+2026-07-07T21:01:59 | PostToolUse  | tool=ToolSearch | input={"query": "select:mcp__travel__remember_fact,mcp__travel__recall_facts,mcp__travel__search_flights,mcp__travel__search_hotels,mcp__travel__read_file", "max_results": 5}
+2026-07-07T21:02:04 | PreToolUse   | tool=mcp__travel__remember_fact | input={"key": "start_location", "value": "Lahore, Pakistan (LHE)"}
+2026-07-07T21:02:04 | PostToolUse  | tool=mcp__travel__remember_fact | input={"key": "start_location", "value": "Lahore, Pakistan (LHE)"}
+2026-07-07T21:02:04 | PreToolUse   | tool=mcp__travel__remember_fact | input={"key": "destination", "value": "Dubai, UAE (DXB)"}
+2026-07-07T21:02:04 | PostToolUse  | tool=mcp__travel__remember_fact | input={"key": "destination", "value": "Dubai, UAE (DXB)"}
+2026-07-07T21:02:05 | PreToolUse   | tool=mcp__travel__remember_fact | input={"key": "departure_date", "value": "09-20 (year TBD, assumed 2026-09-20)"}
+2026-07-07T21:02:05 | PostToolUse  | tool=mcp__travel__remember_fact | input={"key": "departure_date", "value": "09-20 (year TBD, assumed 2026-09-20)"}
+2026-07-07T21:02:05 | PreToolUse   | tool=mcp__travel__remember_fact | input={"key": "trip_type", "value": "round_trip"}
+2026-07-07T21:02:05 | PostToolUse  | tool=mcp__travel__remember_fact | input={"key": "trip_type", "value": "round_trip"}
+2026-07-08T04:44:41 | PreToolUse   | tool=ToolSearch | input={"query": "select:mcp__travel__remember_fact,mcp__travel__recall_facts", "max_results": 2}
+2026-07-08T04:44:41 | PostToolUse  | tool=ToolSearch | input={"query": "select:mcp__travel__remember_fact,mcp__travel__recall_facts", "max_results": 2}
+2026-07-08T04:44:46 | PreToolUse   | tool=mcp__travel__remember_fact | input={"key": "start_location", "value": "Lahore, Pakistan (LHE)"}
+2026-07-08T04:44:46 | PostToolUse  | tool=mcp__travel__remember_fact | input={"key": "start_location", "value": "Lahore, Pakistan (LHE)"}
+2026-07-08T04:44:47 | PreToolUse   | tool=mcp__travel__remember_fact | input={"key": "destination", "value": "Dubai, UAE (DXB)"}
+2026-07-08T04:44:47 | PostToolUse  | tool=mcp__travel__remember_fact | input={"key": "destination", "value": "Dubai, UAE (DXB)"}
+2026-07-08T04:44:47 | PreToolUse   | tool=mcp__travel__remember_fact | input={"key": "departure_date", "value": "2026-09-20"}
+2026-07-08T04:44:47 | PostToolUse  | tool=mcp__travel__remember_fact | input={"key": "departure_date", "value": "2026-09-20"}
+2026-07-08T04:44:47 | PreToolUse   | tool=mcp__travel__remember_fact | input={"key": "trip_type", "value": "round_trip"}
+2026-07-08T04:44:47 | PostToolUse  | tool=mcp__travel__remember_fact | input={"key": "trip_type", "value": "round_trip"}
+2026-07-08T04:44:48 | PreToolUse   | tool=mcp__travel__remember_fact | input={"key": "total_budget_usd", "value": "NOT PROVIDED"}
+2026-07-08T04:44:48 | PostToolUse  | tool=mcp__travel__remember_fact | input={"key": "total_budget_usd", "value": "NOT PROVIDED"}
+2026-07-08T04:44:48 | PreToolUse   | tool=mcp__travel__remember_fact | input={"key": "return_date", "value": "NOT PROVIDED"}
+2026-07-08T04:44:48 | PostToolUse  | tool=mcp__travel__remember_fact | input={"key": "return_date", "value": "NOT PROVIDED"}
+2026-07-08T04:45:04 | PreToolUse   | tool=mcp__travel__remember_fact | input={"key": "total_budget_usd", "value": "1500 USD"}
+2026-07-08T04:45:04 | PostToolUse  | tool=mcp__travel__remember_fact | input={"key": "total_budget_usd", "value": "1500 USD"}
+2026-07-08T04:45:04 | PreToolUse   | tool=mcp__travel__remember_fact | input={"key": "return_date", "value": "2026-09-27"}
+2026-07-08T04:45:04 | PostToolUse  | tool=mcp__travel__remember_fact | input={"key": "return_date", "value": "2026-09-27"}
+2026-07-08T04:45:05 | PreToolUse   | tool=ToolSearch | input={"query": "select:mcp__claude_ai_Expedia__search_flights,mcp__claude_ai_Expedia__search_hotels", "max_results": 2}
+2026-07-08T04:45:05 | PostToolUse  | tool=ToolSearch | input={"query": "select:mcp__claude_ai_Expedia__search_flights,mcp__claude_ai_Expedia__search_hotels", "max_results": 2}
+2026-07-08T04:45:22 | PreToolUse   | tool=mcp__claude_ai_Expedia__search_flights | input={"origin": "LHE", "destination": "DXB", "departure_date": "2026-09-20", "return_date": "2026-09-27", "adult_count": 1, "cabin_class": "ECONOMY", "sort_type": "PRICE", "price_max": 500, "query_text": "Round trip from Lahore Pakistan to Dubai UAE, departing September 20 2026, returning September 27 20
+2026-07-08T04:45:25 | PreToolUse   | tool=mcp__claude_ai_Expedia__search_hotels | input={"destination": "Dubai, UAE", "check_in_date": "2026-09-20", "check_out_date": "2026-09-27", "adult_count": 1, "sort_type": "CHEAPEST", "max_nightly_price": 145, "max_total_price": 1000, "query_text": "Affordable hotel in Dubai for 7 nights, budget trip from Pakistan, good value", "user_locale": "en
+2026-07-08T04:45:33 | PreToolUse   | tool=ToolSearch | input={"query": "select:mcp__travel__search_flights,mcp__travel__search_hotels", "max_results": 2}
+2026-07-08T04:45:33 | PostToolUse  | tool=ToolSearch | input={"query": "select:mcp__travel__search_flights,mcp__travel__search_hotels", "max_results": 2}
+2026-07-08T04:45:42 | PreToolUse   | tool=mcp__travel__search_flights | input={"departure_id": "LHE", "arrival_id": "DXB", "outbound_date": "2026-09-20", "return_date": "2026-09-27", "trip_type": "round_trip", "max_price_usd": 500}
+2026-07-08T04:45:45 | PostToolUse  | tool=mcp__travel__search_flights | input={"departure_id": "LHE", "arrival_id": "DXB", "outbound_date": "2026-09-20", "return_date": "2026-09-27", "trip_type": "round_trip", "max_price_usd": 500}
+2026-07-08T04:45:45 | PreToolUse   | tool=mcp__travel__search_hotels | input={"city": "Dubai, UAE", "check_in_date": "2026-09-20", "check_out_date": "2026-09-27", "adults": 1, "max_price_per_night_usd": 143}
+2026-07-08T04:45:54 | PostToolUse  | tool=mcp__travel__search_hotels | input={"city": "Dubai, UAE", "check_in_date": "2026-09-20", "check_out_date": "2026-09-27", "adults": 1, "max_price_per_night_usd": 143}
+2026-07-08T04:46:09 | PreToolUse   | tool=mcp__travel__remember_fact | input={"key": "best_flight_price", "value": "$411 round trip \u2014 Fly Jinnah, nonstop LHE\u2192DXB 3h25m"}
+2026-07-08T04:46:09 | PostToolUse  | tool=mcp__travel__remember_fact | input={"key": "best_flight_price", "value": "$411 round trip \u2014 Fly Jinnah, nonstop LHE\u2192DXB 3h25m"}
+2026-07-08T04:46:09 | PreToolUse   | tool=mcp__travel__remember_fact | input={"key": "best_hotel_value", "value": "Hyatt Regency Dubai \u2014 $63/night, 5-star, 4.4 rating, 12,011 reviews"}
+2026-07-08T04:46:09 | PostToolUse  | tool=mcp__travel__remember_fact | input={"key": "best_hotel_value", "value": "Hyatt Regency Dubai \u2014 $63/night, 5-star, 4.4 rating, 12,011 reviews"}

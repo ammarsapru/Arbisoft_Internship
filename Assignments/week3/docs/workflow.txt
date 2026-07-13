@@ -1,0 +1,379 @@
+END-TO-END WORKFLOW
+======================
+(Grounded in the actual code paths of this repo, file:function references
+throughout. See constraints.txt for the enforcement details referenced
+inline here.)
+
+
+STAGE 0 — SETUP
+------------------
+load_dotenv() reads .env (Ollama host/model overrides etc.). Everything
+below assumes a local Ollama server is running with the required models
+pulled (qwen3-embedding:0.6b, snowflake-arctic-embed:latest, and a chat
+model, default qwen2.5:1.5b, overridable via RAG_LLM_MODEL).
+
+
+STAGE 1 — INGESTION (extract_pdf.py)
+----------------------------------------
+load_pdf_pages(path):
+  - pypdf.PdfReader reads nke-10k-2023.pdf.
+  - For each page i (0-indexed, literal PDF page order — NOT derived from
+    chunk count), extract_text() pulls the raw text.
+  - Wrapped into one langchain_core.documents.Document per page:
+        Document(page_content=<page text>, metadata={"source": path, "page": i})
+  - Output: list[Document], one per PDF page, length == number of pages in
+    the PDF.
+
+This "page" number is the identity key that threads through the entire
+rest of the system: chunk provenance, retrieved-chunk labeling, citation
+checking, and eval ground truth all key off this exact integer.
+
+
+STAGE 2 — CHUNKING (chunking.py)
+-------------------------------------
+get_chunks(docs):
+  - RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200,
+    add_start_index=True) splits each page-level Document's text.
+  - Splitting tries paragraph boundaries first, then sentences, then words,
+    falling back to a hard character cut only as a last resort.
+  - Each output chunk is a new Document that INHERITS the parent page's
+    metadata["page"] (plus a new "start_index"). A page's text length
+    determines how many chunks it becomes — NOT a fixed ratio. A short
+    page (e.g. a cover page) may stay as 1 chunk; a dense financial-
+    statement page may split into 4+ chunks, all still tagged with the
+    same "page" number.
+  - Output: list[Document], length >= number of pages (roughly 3-4x in
+    practice for this PDF).
+
+
+STAGE 3 — EMBEDDING + INDEXING (get_embeddings.py, store_utils.py)
+------------------------------------------------------------------------
+get_qwen_embed() / get_snowfl_embed():
+  - Return OllamaEmbeddings instances (langchain_ollama), each a thin
+    client for one embedding model served by the local Ollama daemon.
+
+build_vector_store(embeddings, chunks, batch_size=32, max_retries=3):
+  - Creates an InMemoryVectorStore(embeddings) (langchain_core).
+  - Adds chunks in batches of 32 via store.add_documents(...).
+  - If a batch's embedding call raises, retries up to 3 times with linear
+    backoff (2 * attempt seconds) before giving up — this is the ONLY
+    retry loop in the codebase, and it guards against transient Ollama
+    failures (e.g. the model runner crashing while swapping models), not
+    against bad LLM output later in the pipeline.
+  - Output: a queryable InMemoryVectorStore exposing
+    similarity_search(query, k) / similarity_search_with_score(query, k).
+
+From here the pipeline forks into two independent consumers of the store.
+
+
+STAGE 4a — MANUAL DEMO (main.py)
+-------------------------------------
+Builds a store for BOTH embedding models, fires one hardcoded query at
+each, and prints the top-3 results with similarity scores side by side.
+No metrics, no ground truth, no persistence — a manual eyeball check only.
+
+
+STAGE 4b — STRUCTURED QUESTION ANSWERING (rag_pipeline.py)
+------------------------------------------------------------------
+answer_question(question, store, k=4, model=DEFAULT_LLM_MODEL,
+                 constrained=True, save=True):
+
+  1. RETRIEVE
+     docs_with_scores = store.similarity_search_with_score(question, k=4)
+     -> top-4 (Document, cosine_similarity_score) pairs. Using the
+     _with_score variant (added in the 2026-07-07 prompt restructure,
+     previously plain similarity_search) so the score can be surfaced to
+     the model as a relevance signal in step 2. docs (score stripped) is
+     kept separately for retrieved_pages/grounding_report, which expect
+     plain Document lists.
+
+  2. PROMPT + GENERATE (call_llm) — restructured 2026-07-07 into a system
+     message + human message, replacing the earlier single-blob
+     PROMPT_TEMPLATE string (see tracker.txt for the measured impact of
+     this change: hallucination_rate 0.583 -> 0.083, refusal_rate 0.0 ->
+     0.5 on the adversarial eval set).
+     - SYSTEM_PROMPT (sent identically every call): persona ("NikeFilingGPT"),
+       explicit can/cannot-do lists, two named REFUSAL rules each with a
+       worked example (context lacks substance; question outside domain),
+       and the JSON output contract. See constraints.txt section 1 for
+       the full text summary.
+     - format_context(docs_with_scores) renders each chunk as
+       "[page N, relevance score S.SSSS]\n<text>", joined with blank
+       lines — the score is new; it gives the model a numeric signal to
+       judge relevance with, on top of reading the text itself.
+     - USER_PROMPT_TEMPLATE.format(k=..., context=..., question=...)
+       builds a human-turn string with two clearly labeled, structurally
+       distinct sections: "### RETRIEVED CONTEXT" and "### USER QUESTION"
+       — kept apart so the question is never diluted into the same
+       paragraph as the (possibly irrelevant) retrieved text.
+     - messages = [SystemMessage(content=SYSTEM_PROMPT),
+       HumanMessage(content=user_prompt)] — two distinct LangChain
+       message objects (langchain_core.messages), not a single string;
+       ChatOllama maps these to Ollama's "system"/"user" chat roles.
+     - ChatOllama(model=..., temperature=0,
+       format=RAGAnswer.model_json_schema() if constrained else None)
+       .invoke(messages) — still no LCEL chain, still a direct .invoke()
+       call, just on a message list instead of a bare string.
+     - When constrained=True (default), Ollama's structured-output
+       decoding is constrained to RAGAnswer's JSON schema at generation
+       time (constraints.txt section 3).
+     - Returns raw text (llm.invoke(messages).content).
+
+  3. VALIDATE (schemas.parse_llm_output)
+     - Strip a single wrapping ```json fence if present
+       (schemas._FENCE_RE, see REGEX GUARDS below).
+     - json.loads() the remaining text; must decode to a dict.
+     - RAGAnswer.model_validate(data) — the hard schema gate
+       (constraints.txt section 2: extra="forbid", strict=True, field
+       constraints).
+     - On any failure, SchemaValidationError is raised and caught here;
+       NO retry/re-prompt happens. The record is marked
+       status="schema_error" with the raw output and error message
+       preserved, and the pipeline moves on — bad generations are kept as
+       evidence, not discarded and not silently retried.
+
+  4. GROUND (hallucination.grounding_report) — only runs if step 3 passed
+     - check_citation_pages: cited pages subset-of retrieved pages?
+     - check_quotes_grounded: cited quotes literally present (normalized)
+       in that page's retrieved text?
+     - check_numbers_grounded: every number in the answer text present
+       somewhere in retrieved context?
+     - Bundled into {"grounded": bool, "num_issues": int, "checks": {...}}.
+     - Non-blocking: an answer with grounded=False is still returned/saved
+       exactly like a clean one (constraints.txt section 4).
+
+  5. PERSIST
+     - record = {question, model, constrained, retrieved_pages,
+       llm_seconds, raw_output, timestamp, status, [validated,
+       grounding] OR [error]}
+     - Written to results/answers/answer-<UTC timestamp>.json if save=True.
+     - Nothing computed in steps 1-4 is dropped before being written —
+       this file is the full audit trail for one question.
+
+rag_pipeline.py's own main() rebuilds the qwen-embedded store and runs
+answer_question over the first 3 questions of eval_dataset.json as a
+smoke test, printing status/answer/confidence/grounded to stdout.
+
+
+STAGE 5 — RETRIEVAL QUALITY EVALUATION (retrieval_eval.py)
+------------------------------------------------------------------
+Separate from question-answering; makes NO LLM call at all — measures the
+embedding models' retrieval quality only.
+
+main():
+  - Loads all 14 questions from eval_dataset.json (each has manually
+    verified expected_pages — binary relevance ground truth).
+  - Builds one InMemoryVectorStore per embedding model (qwen, snowflake).
+  - evaluate_model(store, questions, K_VALUES=[1,3,5,10]):
+      For each question: store.similarity_search(question, k=10) ->
+      retrieved_pages (ranked). Computes, PER QUESTION, AT EACH k:
+        hit_at_k      - 1.0 if any of the first k retrieved pages is in
+                        expected_pages, else 0.0.
+        recall_at_k   - |unique retrieved pages in top-k intersect
+                        expected_pages| / |expected_pages|.
+        (reciprocal_rank computed too, feeding mrr@k)
+      Then averages each metric across all 14 questions to build the
+      summary: hit_rate@k, recall@k, mrr@k, plus avg_query_seconds and
+      index_seconds.
+  - Also computes precision@k (fraction of top-k retrieved chunks whose
+    page is relevant; unlike recall, duplicate chunks from the same page
+    each count) and ndcg@k (binary-relevance NDCG, normalized against the
+    ideal ranking of the same expected_pages -- this dataset has no
+    graded relevance labels, only "in expected_pages or not").
+  - Report (per-question breakdown + summary, all 5 metrics x 4 k values)
+    for both models written to results/retrieval_eval.json, plus a
+    comparison table printed to stdout.
+  - REAL RESULT (2026-07-07): qwen3-embedding:0.6b outperforms
+    snowflake-arctic-embed:latest at every k on every metric (e.g.
+    hit_rate@5 0.857 vs 0.714, ndcg@5 0.806 vs 0.488).
+
+
+STAGE 5b — GENERATION QUALITY EVALUATION (generation_eval.py)
+-------------------------------------------------------------------
+Runs the REAL pipeline (rag_pipeline.answer_question, real Ollama chat
+model) against every question in eval_dataset.json.
+
+  generation_eval.evaluate_question(q, store, embeddings):
+    - Calls answer_question() for real -- real retrieval, real LLM call,
+      real schema validation, real grounding check.
+    - faithfulness: lifted straight from the grounding report already
+      computed inside answer_question (1.0/0.0).
+    - correctness_keyword_coverage (generation_metrics.keyword_coverage):
+      fraction of eval_dataset.json's answer_keywords found verbatim
+      (normalized) in the generated answer -- deterministic, no embedding
+      call needed.
+    - correctness_semantic (generation_metrics.cosine_similarity): cosine
+      similarity between embed(generated answer) and
+      embed(reference_answer), using the same qwen3-embedding model.
+    - relevance_semantic: cosine similarity between embed(question) and
+      embed(generated answer) -- independent of correctness/faithfulness,
+      catches a fluent grounded answer that's just off-topic.
+  Aggregated to results/generation_eval.json (per-question + summary).
+  REAL RESULT (2026-07-07, qwen2.5:1.5b, 14/14 schema-valid): mean
+  faithfulness=0.5, mean correctness_keyword_coverage=0.476, mean
+  correctness_semantic=0.657, mean relevance_semantic=0.682. Faithfulness
+  and correctness diverge per-question -- several answers had the right
+  content but failed grounding (fabricated/misattributed citations),
+  which is exactly the failure mode having both metrics is meant to catch.
+
+
+STAGE 5c — HALLUCINATION EVAL VIA GRADUATED OUT-OF-SCOPE QUERIES
+    (hallucination_eval.py, adversarial_eval_dataset.json)
+-------------------------------------------------------------------
+adversarial_eval_dataset.json holds 12 questions in 4 tiers of increasing
+topic distance from the Nike 10-K (tier 1: same company, fact just not in
+the filing -> tier 4: completely unrelated, e.g. "capital of France").
+Retrieval always returns the top-k nearest Nike chunks regardless of
+query, so every question here should make the model set
+insufficient_context=true rather than answer from irrelevant context.
+
+  hallucination_eval.evaluate_question(q, store) runs the REAL pipeline
+  and classifies the outcome:
+    correctly_refused     - insufficient_context=true (desired).
+    hallucinated            - answered confidently AND failed grounding.
+    answered_but_grounded    - answered anyway, but citations/numbers
+                              happened to trace back to real retrieved
+                              Nike text (schema-valid, narrowly
+                              "grounded," still the wrong behavior for an
+                              unanswerable question).
+    schema_error             - LLM broke the JSON contract.
+  Aggregated per tier + overall to results/hallucination_eval.json.
+  REAL RESULT (2026-07-07, qwen2.5:1.5b): refusal_rate = 0.0 across ALL
+  FOUR TIERS -- the model never once set insufficient_context=true, not
+  even for "What is the capital city of France?" Overall
+  hallucination_rate=0.583, answered_but_grounded_rate=0.417. Topic
+  distance from the core knowledge base did not improve refusal behavior
+  in this run -- insufficient_context is not currently a reliable safety
+  net at this model size/prompt.
+
+
+STAGE 6 — TESTING (tests/)
+-------------------------------
+Two categories: pure hermetic unit tests (default, fast, no network) and
+live tests that hit the real Ollama server (opt-in via `pytest -m live`).
+
+  Pure/hermetic (pyproject.toml: addopts = "-m 'not live'" -- these run by
+  default, 50 tests total):
+
+    test_schemas.py            parse_llm_output/RAGAnswer against ~18
+                                hand-written BROKEN_CASES (prose instead of
+                                JSON, truncated JSON, wrong types,
+                                out-of-range values, extra fields, etc).
+
+    test_hallucination.py      The three grounding checks against
+                                hand-fabricated RAGAnswer + Document
+                                fixtures, each engineered to trigger
+                                exactly one hallucination type.
+
+    test_metrics.py            hit_at_k/recall_at_k/reciprocal_rank/
+                                precision_at_k/dcg_at_k/ndcg_at_k against a
+                                fixed hand-picked page list (RETRIEVED =
+                                [7, 30, 30, 12, 35]), values hand-computed
+                                and cross-checked (e.g. ndcg@5 verified via
+                                the DCG/IDCG formula by hand).
+
+    test_generation_metrics.py  keyword_coverage and cosine_similarity
+                                (correctness/relevance building blocks)
+                                against hand-computed values -- identical
+                                vectors -> 1.0, orthogonal -> 0.0, opposite
+                                -> -1.0, zero-vector -> 0.0 not NaN.
+
+  Live (opt-in, 7 tests total, all confirmed passing against real Ollama
+  on 2026-07-07, ~256s total runtime):
+
+    test_live_llm.py            Real PDF -> real chunks -> real qwen
+                                embeddings -> real InMemoryVectorStore ->
+                                real ChatOllama calls -> answer_question()
+                                end to end, against the first 3
+                                eval_dataset.json questions. Skips
+                                automatically if Ollama isn't running or
+                                the chat model isn't pulled.
+
+    test_live_eval.py           NEW. Wires generation_eval.evaluate_question
+                                and hallucination_eval.evaluate_question to
+                                the real pipeline: asserts generation
+                                metrics land in valid ranges (correctness/
+                                relevance in [-1,1], faithfulness in
+                                {0,1}) for real answers, and that
+                                hallucination_eval produces one of the 4
+                                known outcome classifications for a real
+                                adversarial question, across all 4 tiers.
+
+  So: hermetic tests validate the FORMULAS and DETECTORS are correct in
+  isolation; live tests prove the wired-together pipeline (including the
+  two new eval runners) actually behaves as expected against a real
+  model. Both categories are green as of this snapshot.
+
+
+REGEX GUARDS — WHERE AND WHY
+---------------------------------
+Three compiled regexes exist in the whole codebase, each doing one narrow
+job:
+
+  schemas._FENCE_RE
+    r"^```(?:json)?\s*(.*?)\s*```$"  (re.DOTALL)
+    Anchored to the WHOLE (stripped) string — the entire raw output must
+    itself be exactly one ```/```json fence wrapping JSON, or this regex
+    does not match and the text is passed through unchanged. Handles the
+    common LLM habit of fencing JSON in markdown; does NOT strip fences
+    embedded inside surrounding prose, and does NOT handle multiple/nested
+    fences — that's treated as a genuine schema violation, not transport
+    noise.
+
+  hallucination._WS_RE
+    r"\s+"
+    Used in normalize() to collapse any run of whitespace (including
+    newlines introduced by pypdf's text extraction) to a single space and
+    lowercase the result, so quote matching survives PDF-extraction
+    spacing/case artifacts without false negatives.
+
+  hallucination._NUMBER_RE
+    r"\d[\d,]*(?:\.\d+)?"
+    Matches numeric tokens including thousands separators and decimals
+    (e.g. 51.2, 2,859, 43.5, 83,700). Used in BOTH directions: to build the
+    set of "numbers present in retrieved context" AND to extract "numbers
+    claimed in the answer" for check_numbers_grounded. normalize_number()
+    then strips commas before comparing, so "51,200" and "51200" are
+    treated as the same value.
+
+None of these three regexes are validation gates on their own — _FENCE_RE
+is a pre-processing step before the real gate (Pydantic), and the other two
+are matching/extraction utilities feeding the non-blocking grounding
+report, not something that can reject an answer by itself.
+
+
+ARTIFACTS WRITTEN TO DISK
+------------------------------
+  results/answers/answer-<timestamp>.json   One per answer_question() call
+                                             with save=True. Full audit
+                                             trail: raw output, validated
+                                             answer (or error), grounding
+                                             report, retrieved pages,
+                                             timing.
+
+  results/retrieval_eval.json               One per retrieval_eval.py run.
+                                             Per-question + aggregated
+                                             hit_rate/precision/recall/
+                                             mrr/ndcg @ each k, for every
+                                             embedding model evaluated.
+
+  results/generation_eval.json              One per generation_eval.py
+                                             run. Per-question + aggregated
+                                             faithfulness/correctness_
+                                             keyword_coverage/correctness_
+                                             semantic/relevance_semantic,
+                                             against the real chat model.
+
+  results/hallucination_eval.json           One per hallucination_eval.py
+                                             run. Per-question outcome
+                                             classification + per-tier and
+                                             overall refusal_rate/
+                                             hallucination_rate/
+                                             answered_but_grounded_rate,
+                                             against the real chat model
+                                             and the 4-tier adversarial
+                                             dataset.
+
+See constraints.txt for the full list of what IS and is NOT enforced or
+measured at each stage above, including the real measured results from
+the 2026-07-07 run of all three eval scripts and the live test suite.
