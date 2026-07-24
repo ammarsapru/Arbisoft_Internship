@@ -24,14 +24,14 @@ The enforced pytest value is coverage.py's combined statement/branch result. The
 | `backend/app/observability.py` | 77.5% | 64.5% |
 | `backend/app/agent/service.py` | 77.7% | 60.0% |
 | `backend/app/repository_import.py` | 81.1% | 83.3% |
+| `backend/app/main.py` | 84.2% | 50.0% |
 | `backend/app/agent/retrieval.py` | 84.2% | 74.4% |
-| `backend/app/main.py` | 85.2% | 50.0% |
 | `backend/app/graph/polyglot.py` | 87.0% | 71.5% |
 | `backend/app/onboarding/service.py` | 88.3% | 76.9% |
 | `backend/app/graph/analyzer.py` | 88.7% | 72.7% |
 | `backend/app/agent/comparison.py` | 89.6% | 64.3% |
-| `backend/app/config.py` | 89.9% | 75.0% |
 | `backend/app/onboarding/questions.py` | 90.0% | 70.0% |
+| `backend/app/config.py` | 90.0% | 75.0% |
 | `backend/app/indexing.py` | 90.0% | 78.6% |
 
 ## How to inspect details
