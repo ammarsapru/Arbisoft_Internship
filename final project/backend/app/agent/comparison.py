@@ -213,6 +213,8 @@ class ModelComparisonService:
             ttft_ms=None,
             ttft_status="unavailable_non_streaming",
             tool_calls=1,
+            repository_tool_calls=0,
+            structured_output_tool_calls=1,
             requested_max_output_tokens=settings.agent_max_output_tokens,
         )
 

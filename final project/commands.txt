@@ -112,3 +112,13 @@ $env:WAYPOINT_MCP_PORT="8010"
 npx.cmd -y @modelcontextprotocol/inspector
 # Run the local retrieval quality benchmark
 .\.venv\Scripts\python.exe benchmarks\run_retrieval.py --repository . --output benchmarks\results\retrieval-latest.json
+# Deterministic unit suite (40 tests)
+.\.venv\Scripts\python.exe -m pytest -m unit --no-cov
+
+# Deterministic integration suite (33 tests)
+.\.venv\Scripts\python.exe -m pytest -m integration --no-cov
+
+# Whole-backend coverage gate followed by per-core-feature gate
+.\.venv\Scripts\python.exe -m pytest
+.\.venv\Scripts\python.exe -m verification.scripts.core_coverage_report
+.\.venv\Scripts\python.exe -m verification.scripts.coverage_report

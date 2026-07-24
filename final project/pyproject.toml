@@ -38,6 +38,8 @@ dev = [
 testpaths = ["backend/tests"]
 addopts = "-ra --strict-markers --cov=backend.app --cov-report=term-missing --cov-report=xml:.waypoint-data/coverage.xml --cov-report=html:.waypoint-data/coverage-html --cov-fail-under=70"
 markers = [
+    "unit: isolated deterministic tests of one service or algorithm",
+    "integration: deterministic tests crossing application component boundaries",
     "reference_repo: tests that require the pinned Flask reference checkout",
     "live_model: opt-in tests that spend provider credits or subscription usage",
 ]

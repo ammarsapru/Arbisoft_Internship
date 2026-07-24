@@ -115,6 +115,8 @@ class ModelComparisonTests(unittest.TestCase):
         for answer in report.answers:
             self.assertEqual(answer.total_tokens, 70)
             self.assertEqual(answer.tool_calls, 1)
+            self.assertEqual(answer.repository_tool_calls, 0)
+            self.assertEqual(answer.structured_output_tool_calls, 1)
             self.assertEqual(answer.requested_max_output_tokens, 2000)
             self.assertIsNone(answer.ttft_ms)
             self.assertEqual(answer.ttft_status, "unavailable_non_streaming")

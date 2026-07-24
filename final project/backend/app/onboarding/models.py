@@ -239,6 +239,8 @@ class ModelComparisonAnswer(BaseModel):
     ttft_ms: float | None = Field(default=None, ge=0)
     ttft_status: str = "unavailable_non_streaming"
     tool_calls: int = Field(default=1, ge=0)
+    repository_tool_calls: int = Field(default=0, ge=0)
+    structured_output_tool_calls: int = Field(default=1, ge=0)
     requested_max_output_tokens: int = Field(default=0, ge=0)
     validation_status: str = "passed"
 

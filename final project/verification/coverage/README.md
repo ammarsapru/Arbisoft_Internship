@@ -29,6 +29,12 @@ Focused test commands can bypass the global threshold while debugging:
 
 The final full-suite command must never use `--no-cov`.
 
+The whole-backend result is not used as a substitute for the rubric's core-logic target.
+`verification/core-features.json` defines five core product features, and
+`core_coverage_report.py` fails unless every feature and the weighted aggregate are each at
+least 70%. The current core aggregate is 82.81%; the unified detailed table is embedded in
+`verification/results/coverage-report.md`.
+
 Convert an existing XML artifact into Markdown with:
 
 ```powershell
