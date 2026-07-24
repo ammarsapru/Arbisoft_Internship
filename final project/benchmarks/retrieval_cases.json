@@ -1,0 +1,34 @@
+[
+  {
+    "question": "Where is SQLite conversation memory stored and restored?",
+    "expected_paths": ["backend/app/agent/memory.py"]
+  },
+  {
+    "question": "How are GitHub repositories cloned into secure local storage?",
+    "expected_paths": ["backend/app/repository_import.py"]
+  },
+  {
+    "question": "How are TypeScript JavaScript and Java syntax trees parsed?",
+    "expected_paths": ["backend/app/graph/polyglot.py"]
+  },
+  {
+    "question": "Which API endpoint starts repository analysis?",
+    "expected_paths": ["backend/app/api/routes.py"]
+  },
+  {
+    "question": "How are code graph nodes imports and call edges generated?",
+    "expected_paths": ["backend/app/graph/analyzer.py", "backend/app/graph/polyglot.py"]
+  },
+  {
+    "question": "Where does the repository agent execute precise tool calls?",
+    "expected_paths": ["backend/app/agent/service.py"]
+  },
+  {
+    "question": "How does the source index rank and retrieve code chunks?",
+    "expected_paths": ["backend/app/agent/retrieval.py"]
+  },
+  {
+    "question": "How are repository architecture and entry points inferred?",
+    "expected_paths": ["backend/app/agent/semantic.py"]
+  }
+]

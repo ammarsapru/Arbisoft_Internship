@@ -1,0 +1,172 @@
+{
+  "repository": "C:\\Users\\ammar\\OneDrive\\Desktop\\personal\\arbisoft\\final_project_alternative",
+  "case_count": 8,
+  "index_ms": 8969.074,
+  "recall_at_5": 0.875,
+  "recall_at_10": 1.0,
+  "mean_reciprocal_rank": 0.4542,
+  "mean_query_ms": 498.541,
+  "results": [
+    {
+      "question": "Where is SQLite conversation memory stored and restored?",
+      "expected_paths": [
+        "backend/app/agent/memory.py"
+      ],
+      "retrieved_paths": [
+        "backend/app/agent/retrieval.py",
+        "backend/app/agent/onboarding.py",
+        "backend/app/agent/memory.py",
+        "backend/app/agent/service.py",
+        "backend/app/onboarding/service.py",
+        "current-storage-and-retrieval-architecture.md",
+        "frontend/src/components/IssuesWorkspace.tsx",
+        "frontend/src/App.tsx",
+        "backend/app/graph/polyglot.py",
+        "backend/app/graph/store.py"
+      ],
+      "first_relevant_rank": 3,
+      "latency_ms": 541.701
+    },
+    {
+      "question": "How are GitHub repositories cloned into secure local storage?",
+      "expected_paths": [
+        "backend/app/repository_import.py"
+      ],
+      "retrieved_paths": [
+        "frontend/src/App.tsx",
+        "backend/app/issues/service.py",
+        "backend/tests/test_repository_import.py",
+        "backend/app/repository_import.py",
+        "benchmarks/retrieval_cases.json",
+        "benchmarks/results/retrieval-latest.json",
+        "backend/app/agent/retrieval.py",
+        "backend/app/graph/polyglot.py",
+        "current-storage-and-retrieval-architecture.md",
+        "backend/app/api/routes.py"
+      ],
+      "first_relevant_rank": 4,
+      "latency_ms": 446.744
+    },
+    {
+      "question": "How are TypeScript JavaScript and Java syntax trees parsed?",
+      "expected_paths": [
+        "backend/app/graph/polyglot.py"
+      ],
+      "retrieved_paths": [
+        "backend/app/graph/polyglot.py",
+        "recommended-indexing-and-retrieval-architecture.md",
+        "README.md",
+        "differentiator-plan.md",
+        "plan.md",
+        "backend/app/graph/analyzer.py",
+        "current-storage-and-retrieval-architecture.md",
+        "backend/app/onboarding/service.py",
+        "backend/app/agent/retrieval.py",
+        "frontend/src/App.tsx"
+      ],
+      "first_relevant_rank": 1,
+      "latency_ms": 434.685
+    },
+    {
+      "question": "Which API endpoint starts repository analysis?",
+      "expected_paths": [
+        "backend/app/api/routes.py"
+      ],
+      "retrieved_paths": [
+        "frontend/src/App.tsx",
+        "backend/app/graph/store.py",
+        "backend/tests/test_api.py",
+        "frontend/src/api.ts",
+        "backend/app/api/routes.py",
+        "backend/app/repository_import.py",
+        "backend/app/agent/service.py",
+        "backend/app/graph/analyzer.py",
+        "backend/tests/test_agent.py",
+        "backend/app/agent/retrieval.py"
+      ],
+      "first_relevant_rank": 5,
+      "latency_ms": 585.899
+    },
+    {
+      "question": "How are code graph nodes imports and call edges generated?",
+      "expected_paths": [
+        "backend/app/graph/analyzer.py",
+        "backend/app/graph/polyglot.py"
+      ],
+      "retrieved_paths": [
+        "backend/app/graph/polyglot.py",
+        "plan.md",
+        "frontend/src/App.tsx",
+        "backend/app/agent/retrieval.py",
+        "backend/app/graph/analyzer.py",
+        "recommended-indexing-and-retrieval-architecture.md",
+        "backend/app/onboarding/service.py",
+        "README.md",
+        "backend/app/agent/semantic.py",
+        "frontend/src/components/GraphView.tsx"
+      ],
+      "first_relevant_rank": 1,
+      "latency_ms": 526.513
+    },
+    {
+      "question": "Where does the repository agent execute precise tool calls?",
+      "expected_paths": [
+        "backend/app/agent/service.py"
+      ],
+      "retrieved_paths": [
+        "backend/app/agent/onboarding.py",
+        "backend/app/agent/service.py",
+        "plan.md",
+        "backend/tests/test_agent.py",
+        "frontend/src/App.tsx",
+        "backend/app/agent/retrieval.py",
+        "README.md",
+        "backend/app/agent/issues.py",
+        "backend/app/repository_import.py",
+        "current-storage-and-retrieval-architecture.md"
+      ],
+      "first_relevant_rank": 2,
+      "latency_ms": 478.091
+    },
+    {
+      "question": "How does the source index rank and retrieve code chunks?",
+      "expected_paths": [
+        "backend/app/agent/retrieval.py"
+      ],
+      "retrieved_paths": [
+        "backend/app/graph/polyglot.py",
+        "frontend/src/App.tsx",
+        "plan.md",
+        "backend/app/agent/retrieval.py",
+        "recommended-indexing-and-retrieval-architecture.md",
+        "backend/app/onboarding/service.py",
+        "README.md",
+        "current-storage-and-retrieval-architecture.md",
+        "backend/app/agent/semantic.py",
+        "differentiator-plan.md"
+      ],
+      "first_relevant_rank": 4,
+      "latency_ms": 520.303
+    },
+    {
+      "question": "How are repository architecture and entry points inferred?",
+      "expected_paths": [
+        "backend/app/agent/semantic.py"
+      ],
+      "retrieved_paths": [
+        "frontend/src/App.tsx",
+        "recommended-indexing-and-retrieval-architecture.md",
+        "backend/app/graph/polyglot.py",
+        "README.md",
+        "backend/tests/test_agent.py",
+        "backend/app/repository_import.py",
+        "plan.md",
+        "current-storage-and-retrieval-architecture.md",
+        "backend/app/agent/onboarding.py",
+        "backend/app/agent/semantic.py"
+      ],
+      "first_relevant_rank": 10,
+      "latency_ms": 454.391
+    }
+  ]
+}
